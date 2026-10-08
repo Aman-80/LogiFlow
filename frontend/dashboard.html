@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>LogiFlow | Dashboard</title>
+
+    <link
+        rel="stylesheet"
+        href="css/dashboard.css"
+    >
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <span class="logo-mark">L</span>
+                <span class="logo-logi">Logi</span><span class="logo-flow">Flow</span>
+            </div>
+
+            <nav class="navigation">
+
+                <a href="dashboard.html" class="nav-item active">
+                    Dashboard
+                </a>
+
+                <a href="inventory.html" class="nav-item">
+                    Inventory
+                </a>
+
+                <a href="orders.html" class="nav-item">
+                    Orders
+                </a>
+
+                <a href="shipments.html" class="nav-item">
+                    Shipments
+                </a>
+
+                <a href="warehouses.html" class="nav-item">
+                    Warehouses
+                </a>
+
+                <a href="deliveries.html" class="nav-item">
+                    Deliveries
+                </a>
+
+            </nav>
+
+            <div class="sidebar-bottom">
+
+                <a href="index.html" class="nav-item">
+                    Logout
+                </a>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <header class="topbar">
+
+                <div>
+                    <h1>Dashboard</h1>
+
+                    <p>
+                        Overview of your logistics operations
+                    </p>
+                </div>
+
+                <div class="user-info">
+                    Admin
+                </div>
+
+            </header>
+
+
+            <!-- STATISTICS -->
+            <section class="stats">
+
+                <div class="stat-card">
+
+                    <p>Total Orders</p>
+
+                    <h2>248</h2>
+
+                    <span>
+                        This month
+                    </span>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <p>Shipments</p>
+
+                    <h2>126</h2>
+
+                    <span>
+                        In transit
+                    </span>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <p>Inventory</p>
+
+                    <h2>82%</h2>
+
+                    <span>
+                        Capacity used
+                    </span>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <p>Deliveries</p>
+
+                    <h2>94</h2>
+
+                    <span>
+                        Completed
+                    </span>
+
+                </div>
+
+            </section>
+
+
+            <!-- LOWER SECTION -->
+            <section class="dashboard-grid">
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <h2>Recent Orders</h2>
+
+                        <a href="orders.html">
+                            View All
+                        </a>
+
+                    </div>
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                <tr>
+                                    <td>LF-1001</td>
+                                    <td>ABC Ltd</td>
+                                    <td>
+                                        <span class="status shipped">
+                                            Shipped
+                                        </span>
+                                    </td>
+                                    <td>₹24,500</td>
+                                </tr>
+
+                                <tr>
+                                    <td>LF-1002</td>
+                                    <td>XYZ Pvt Ltd</td>
+                                    <td>
+                                        <span class="status pending">
+                                            Pending
+                                        </span>
+                                    </td>
+                                    <td>₹12,800</td>
+                                </tr>
+
+                                <tr>
+                                    <td>LF-1003</td>
+                                    <td>Global Traders</td>
+                                    <td>
+                                        <span class="status delivered">
+                                            Delivered
+                                        </span>
+                                    </td>
+                                    <td>₹31,200</td>
+                                </tr>
+
+                                <tr>
+                                    <td>LF-1004</td>
+                                    <td>Metro Supplies</td>
+                                    <td>
+                                        <span class="status processing">
+                                            Processing
+                                        </span>
+                                    </td>
+                                    <td>₹18,750</td>
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+
+                <div class="panel">
+
+                    <div class="panel-header">
+
+                        <h2>Shipment Overview</h2>
+
+                    </div>
+
+                    <div class="shipment-overview">
+
+                        <div class="shipment-item">
+
+                            <div>
+                                <p>In Transit</p>
+                                <strong>126</strong>
+                            </div>
+
+                            <div class="progress">
+                                <div class="progress-bar transit"></div>
+                            </div>
+
+                        </div>
+
+
+                        <div class="shipment-item">
+
+                            <div>
+                                <p>Delivered</p>
+                                <strong>94</strong>
+                            </div>
+
+                            <div class="progress">
+                                <div class="progress-bar delivered-bar"></div>
+                            </div>
+
+                        </div>
+
+
+                        <div class="shipment-item">
+
+                            <div>
+                                <p>Delayed</p>
+                                <strong>8</strong>
+                            </div>
+
+                            <div class="progress">
+                                <div class="progress-bar delayed"></div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+</body>
+
+</html>
