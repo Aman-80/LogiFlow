@@ -1,0 +1,331 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LogiFlow | Shipments</title>
+
+    <link rel="stylesheet" href="css/shipments.css">
+</head>
+
+<body>
+
+    <div class="shipments-page">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <span class="logo-mark">L</span><span class="logo-logi">Logi</span><span class="logo-flow">Flow</span>
+            </div>
+
+            <nav class="navigation">
+                <a href="dashboard.html" class="nav-item">Dashboard</a>
+                <a href="inventory.html" class="nav-item">Inventory</a>
+                <a href="orders.html" class="nav-item">Orders</a>
+                <a href="shipments.html" class="nav-item active">Shipments</a>
+                <a href="warehouses.html" class="nav-item">Warehouses</a>
+                <a href="deliveries.html" class="nav-item">Deliveries</a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <a href="index.html" class="nav-item">Logout</a>
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- TOPBAR -->
+            <header class="topbar">
+
+                <div>
+                    <h1>Shipments</h1>
+                    <p>Track shipments and manage transportation progress</p>
+                </div>
+
+                <div class="user-info">Admin</div>
+
+            </header>
+
+
+            <!-- SHIPMENT STATISTICS -->
+            <section class="shipment-stats">
+
+                <div class="stat-card">
+                    <p>Total Shipments</p>
+                    <h2 id="total-shipments">6</h2>
+                    <span>All recorded shipments</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>In Transit</p>
+                    <h2 id="in-transit-count">2</h2>
+                    <span>Moving to destinations</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Out for Delivery</p>
+                    <h2 id="out-for-delivery-count">1</h2>
+                    <span>Final delivery stage</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Delayed</p>
+                    <h2 id="delayed-count">1</h2>
+                    <span>Requires attention</span>
+                </div>
+
+            </section>
+
+
+            <!-- SHIPMENTS PANEL -->
+            <section class="shipments-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>All Shipments</h2>
+                        <p>Manage shipment details and delivery progress</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="add-shipment-btn"
+                        id="open-shipment-modal">
+                        + Add Shipment
+                    </button>
+
+                </div>
+
+
+                <!-- SEARCH AND FILTER -->
+                <div class="shipments-controls">
+
+                    <div class="search-box">
+                        <input
+                            type="search"
+                            id="search-shipment"
+                            placeholder="Search shipment, order or tracking number..."
+                            aria-label="Search shipments">
+                    </div>
+
+                    <select id="status-filter" aria-label="Filter shipments by status">
+                        <option value="All Status">All Status</option>
+                        <option value="Preparing">Preparing</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Delayed">Delayed</option>
+                    </select>
+
+                </div>
+
+
+                <!-- SHIPMENTS TABLE -->
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>Shipment ID</th>
+                                <th>Order ID</th>
+                                <th>Carrier</th>
+                                <th>Tracking Number</th>
+                                <th>Destination</th>
+                                <th>Est. Delivery</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="shipments-table-body">
+                            <!-- Shipment rows will be rendered by JavaScript -->
+                        </tbody>
+
+                    </table>
+
+                    <p id="empty-shipments" class="empty-state" hidden>
+                        No shipments match your search.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- ADD SHIPMENT MODAL -->
+    <div
+        class="modal-overlay"
+        id="shipment-modal"
+        aria-hidden="true">
+
+        <section
+            class="shipment-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shipment-modal-title">
+
+            <!-- MODAL HEADER -->
+            <div class="modal-header">
+
+                <div>
+                    <h2 id="shipment-modal-title">Create New Shipment</h2>
+                    <p>Enter shipment and transportation details</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="close-modal"
+                    id="close-shipment-modal"
+                    aria-label="Close form">
+                    ×
+                </button>
+
+            </div>
+
+
+            <!-- SHIPMENT FORM -->
+            <form id="shipment-form">
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="shipment-order-id">Order ID</label>
+                        <input
+                            type="text"
+                            id="shipment-order-id"
+                            placeholder="Example: LF-ORD-1007"
+                            maxlength="50"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shipment-carrier">Carrier</label>
+                        <select id="shipment-carrier" required>
+                            <option value="">Select carrier</option>
+                            <option value="Blue Dart">Blue Dart</option>
+                            <option value="Delhivery">Delhivery</option>
+                            <option value="DTDC">DTDC</option>
+                            <option value="India Post">India Post</option>
+                            <option value="FedEx">FedEx</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="tracking-number">Tracking Number</label>
+                        <input
+                            type="text"
+                            id="tracking-number"
+                            placeholder="Enter tracking number"
+                            maxlength="80"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shipment-status">Shipment Status</label>
+                        <select id="shipment-status" required>
+                            <option value="Preparing">Preparing</option>
+                            <option value="In Transit">In Transit</option>
+                            <option value="Out for Delivery">Out for Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Delayed">Delayed</option>
+                        </select>
+                    </div>
+
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="shipment-origin">Origin</label>
+                        <input
+                            type="text"
+                            id="shipment-origin"
+                            placeholder="Origin city or warehouse"
+                            maxlength="120"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shipment-destination">Destination</label>
+                        <input
+                            type="text"
+                            id="shipment-destination"
+                            placeholder="Destination city or address"
+                            maxlength="120"
+                            required>
+                    </div>
+
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="dispatch-date">Dispatch Date</label>
+                        <input
+                            type="date"
+                            id="dispatch-date"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimated-delivery">Estimated Delivery</label>
+                        <input
+                            type="date"
+                            id="estimated-delivery"
+                            required>
+                    </div>
+
+                </div>
+
+
+                <!-- FORM ACTIONS -->
+                <div class="form-actions">
+
+                    <button
+                        type="button"
+                        class="cancel-btn"
+                        id="cancel-shipment">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="save-shipment-btn">
+                        Create Shipment
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+
+    <!-- JAVASCRIPT -->
+    <script src="js/shipments.js"></script>
+
+</body>
+
+</html>
