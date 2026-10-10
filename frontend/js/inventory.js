@@ -1,8 +1,22 @@
-const addProductButton = document.querySelector("#open-product-modal");
-const modal = document.querySelector("#product-modal");
-const closeModalButton = document.querySelector("#close-product-modal");
-const cancelButton = document.querySelector("#cancel-product");
 
+/* =========================================
+   LOGIFLOW INVENTORY
+   Product management, stock adjustments,
+   SKU correction and stock history
+========================================= */
+
+const STORAGE_KEY = "logiflow.inventory.v1";
+
+
+/* =========================================
+   ELEMENTS
+========================================= */
+
+const addProductButton = document.querySelector("#open-product-modal");
+
+const productModal = document.querySelector("#product-modal");
+const closeProductButton = document.querySelector("#close-product-modal");
+const cancelProductButton = document.querySelector("#cancel-product");
 const productForm = document.querySelector("#product-form");
 
 const productNameInput = document.querySelector("#product-name");
@@ -11,11 +25,19 @@ const productSkuInput = document.querySelector("#product-sku");
 const productStockInput = document.querySelector("#product-stock");
 const productWarehouseInput = document.querySelector("#product-warehouse");
 
-const inventoryTable = document.querySelector("#inventory-table-body");
+const productModalTitle = document.querySelector("#product-modal-title");
+const productModalDescription =
+    productModal.querySelector(".modal-header p");
+const productFormNotice = document.querySelector("#product-form-notice");
+const saveProductButton =
+    productForm.querySelector(".save-product-btn");
 
 const searchInput = document.querySelector("#search-product");
 const warehouseFilter = document.querySelector("#warehouse-filter");
 const statusFilter = document.querySelector("#status-filter");
+
+const inventoryTable = document.querySelector("#inventory-table-body");
+const emptyInventory = document.querySelector("#empty-inventory");
 
 const totalProductsElement = document.querySelector("#total-products");
 const totalStockElement = document.querySelector("#total-stock");
@@ -23,11 +45,59 @@ const lowStockElement = document.querySelector("#low-stock");
 const totalWarehousesElement = document.querySelector("#total-warehouses");
 
 
-/* ================================
-   INITIAL PRODUCTS
-================================ */
+/* STOCK ADJUSTMENT ELEMENTS */
 
-let products = [
+const stockModal = document.querySelector("#stock-adjustment-modal");
+const stockForm = document.querySelector("#stock-adjustment-form");
+const closeStockButton = document.querySelector("#close-stock-adjustment");
+const cancelStockButton = document.querySelector("#cancel-stock-adjustment");
+
+const adjustmentProductName =
+    document.querySelector("#adjustment-product-name");
+const adjustmentSku = document.querySelector("#adjustment-sku");
+const adjustmentCurrentStock =
+    document.querySelector("#adjustment-current-stock");
+const adjustmentType = document.querySelector("#adjustment-type");
+const adjustmentQuantity =
+    document.querySelector("#adjustment-quantity");
+const adjustmentQuantityLabel =
+    document.querySelector("#adjustment-quantity-label");
+const adjustmentReason = document.querySelector("#adjustment-reason");
+const adjustmentNotes = document.querySelector("#adjustment-notes");
+
+
+/* SKU CORRECTION ELEMENTS */
+
+const skuModal = document.querySelector("#sku-change-modal");
+const skuForm = document.querySelector("#sku-change-form");
+const closeSkuButton = document.querySelector("#close-sku-change");
+const cancelSkuButton = document.querySelector("#cancel-sku-change");
+
+const skuChangeProductName =
+    document.querySelector("#sku-change-product-name");
+const skuChangeCurrent = document.querySelector("#sku-change-current");
+const skuChangeNew = document.querySelector("#sku-change-new");
+const skuChangeReason = document.querySelector("#sku-change-reason");
+const skuChangeNotes = document.querySelector("#sku-change-notes");
+
+
+/* STOCK HISTORY ELEMENTS */
+
+const historyModal = document.querySelector("#stock-history-modal");
+const closeHistoryButton = document.querySelector("#close-stock-history");
+const closeHistoryBottomButton =
+    document.querySelector("#close-stock-history-bottom");
+const historyProductTitle =
+    document.querySelector("#stock-history-product-title");
+const historyTable = document.querySelector("#stock-history-table-body");
+const emptyHistory = document.querySelector("#empty-stock-history");
+
+
+/* =========================================
+   SAMPLE PRODUCTS
+========================================= */
+
+const sampleProducts = [
     {
         name: "Laptop",
         category: "Electronics",
@@ -35,7 +105,6 @@ let products = [
         stock: 245,
         warehouse: "Delhi Warehouse"
     },
-
     {
         name: "Wireless Mouse",
         category: "Accessories",
@@ -43,7 +112,6 @@ let products = [
         stock: 86,
         warehouse: "Chandigarh Warehouse"
     },
-
     {
         name: "Mechanical Keyboard",
         category: "Accessories",
@@ -51,7 +119,6 @@ let products = [
         stock: 132,
         warehouse: "Delhi Warehouse"
     },
-
     {
         name: "Office Chair",
         category: "Furniture",
@@ -59,15 +126,13 @@ let products = [
         stock: 18,
         warehouse: "Mumbai Warehouse"
     },
-
     {
-        name: "Monitor 24\"",
+        name: "Monitor 24 inch",
         category: "Electronics",
         sku: "LF-MON-005",
         stock: 0,
         warehouse: "Chandigarh Warehouse"
     },
-
     {
         name: "Barcode Scanner",
         category: "Warehouse Equipment",
@@ -78,12 +143,144 @@ let products = [
 ];
 
 
-/* ================================
-   PRODUCT STATUS
-================================ */
+/* =========================================
+   STATE
+========================================= */
+
+let products = [];
+let stockHistory = [];
+let editingSku = null;
+let adjustingSku = null;
+let changingSku = null;
+let viewingHistorySku = null;
+
+
+/* =========================================
+   LOAD SAVED DATA
+========================================= */
+
+function loadInventoryState() {
+    try {
+        const savedData = localStorage.getItem(STORAGE_KEY);
+
+        if (savedData === null) {
+            return {
+                products: structuredClone(sampleProducts),
+                stockHistory: []
+            };
+        }
+
+        const parsed = JSON.parse(savedData);
+
+        /*
+           Migration support:
+           The previous version stored only an array
+           of products under this same storage key.
+        */
+        const savedProducts = Array.isArray(parsed)
+            ? parsed
+            : parsed.products;
+
+        const savedHistory = Array.isArray(parsed)
+            ? []
+            : parsed.stockHistory;
+
+        if (!Array.isArray(savedProducts)) {
+            throw new Error("Saved product data is invalid.");
+        }
+
+        const productsAreValid = savedProducts.every(product =>
+            product &&
+            typeof product.name === "string" &&
+            typeof product.category === "string" &&
+            typeof product.sku === "string" &&
+            Number.isInteger(product.stock) &&
+            product.stock >= 0 &&
+            typeof product.warehouse === "string"
+        );
+
+        if (!productsAreValid) {
+            throw new Error("One or more saved products are invalid.");
+        }
+
+        if (
+            savedProducts.some((product, index) =>
+                savedProducts.some((other, otherIndex) =>
+                    index !== otherIndex &&
+                    other.sku.toLowerCase() === product.sku.toLowerCase()
+                )
+            )
+        ) {
+            throw new Error("Duplicate SKUs were found in saved inventory.");
+        }
+
+        return {
+            products: savedProducts,
+            stockHistory: Array.isArray(savedHistory) ? savedHistory : []
+        };
+
+    } catch (error) {
+        console.error("Unable to load inventory:", error);
+
+        alert(
+            "Saved inventory data could not be read. " +
+            "The existing storage has not been overwritten. " +
+            "Check the browser console before continuing."
+        );
+
+        /*
+           Do not overwrite unreadable saved data automatically.
+           The page can still display sample data for diagnosis.
+        */
+        return {
+            products: structuredClone(sampleProducts),
+            stockHistory: []
+        };
+    }
+}
+
+
+const savedState = loadInventoryState();
+
+products = savedState.products;
+stockHistory = savedState.stockHistory;
+
+
+/* =========================================
+   SAVE ALL INVENTORY STATE TOGETHER
+========================================= */
+
+function persistInventoryState() {
+    try {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+                version: 2,
+                products,
+                stockHistory
+            })
+        );
+
+        return true;
+
+    } catch (error) {
+        console.error("Unable to save inventory:", error);
+
+        alert(
+            "Inventory could not be saved in browser storage. " +
+            "Your latest change has not been confirmed as saved."
+        );
+
+        return false;
+    }
+}
+
+
+/* =========================================
+   HELPERS
+========================================= */
 
 function getStatus(stock) {
-
     if (stock === 0) {
         return "Out of Stock";
     }
@@ -97,7 +294,6 @@ function getStatus(stock) {
 
 
 function getStatusClass(status) {
-
     if (status === "In Stock") {
         return "in-stock";
     }
@@ -110,379 +306,903 @@ function getStatusClass(status) {
 }
 
 
-/* ================================
-   RENDER PRODUCTS
-================================ */
+function createCell(value, className = "") {
+    const cell = document.createElement("td");
+    cell.textContent = String(value);
+
+    if (className) {
+        cell.className = className;
+    }
+
+    return cell;
+}
+
+
+function createActionButton(label, action, sku, disabled = false) {
+    const button = document.createElement("button");
+
+    button.type = "button";
+    button.className = "action-btn";
+    button.textContent = label;
+    button.dataset.action = action;
+    button.dataset.sku = sku;
+    button.disabled = disabled;
+
+    return button;
+}
+
+
+function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Unknown";
+    }
+
+    return date.toLocaleString();
+}
+
+
+function getProductBySku(sku) {
+    return products.find(product => product.sku === sku);
+}
+
+
+/* =========================================
+   RENDER INVENTORY
+========================================= */
 
 function renderProducts() {
-
-    const searchValue =
-        searchInput.value.trim().toLowerCase();
-
-    const selectedWarehouse =
-        warehouseFilter.value;
-
-    const selectedStatus =
-        statusFilter.value;
-
+    const searchValue = searchInput.value.trim().toLowerCase();
+    const selectedWarehouse = warehouseFilter.value;
+    const selectedStatus = statusFilter.value;
 
     const filteredProducts = products.filter(product => {
-
-        const matchesSearch =
-            product.name.toLowerCase().includes(searchValue) ||
-            product.sku.toLowerCase().includes(searchValue) ||
-            product.category.toLowerCase().includes(searchValue);
-
+        const matchesSearch = [
+            product.name,
+            product.sku,
+            product.category,
+            product.warehouse
+        ].some(value =>
+            value.toLowerCase().includes(searchValue)
+        );
 
         const matchesWarehouse =
             selectedWarehouse === "All Warehouses" ||
             product.warehouse === selectedWarehouse;
 
-
-        const productStatus =
-            getStatus(product.stock);
-
-
         const matchesStatus =
             selectedStatus === "All Status" ||
-            productStatus === selectedStatus;
+            getStatus(product.stock) === selectedStatus;
 
-
-        return (
-            matchesSearch &&
-            matchesWarehouse &&
-            matchesStatus
-        );
+        return matchesSearch && matchesWarehouse && matchesStatus;
     });
 
-
-    inventoryTable.innerHTML = "";
-
+    inventoryTable.replaceChildren();
 
     filteredProducts.forEach(product => {
-
-        const status = getStatus(product.stock);
-
         const row = document.createElement("tr");
 
+        /* PRODUCT */
+        const productCell = document.createElement("td");
+        const productInfo = document.createElement("div");
+        productInfo.className = "product-info";
 
-        row.innerHTML = `
-            <td>
+        const nameElement = document.createElement("strong");
+        nameElement.textContent = product.name;
 
-                <div class="product-info">
+        const categoryElement = document.createElement("span");
+        categoryElement.textContent = product.category;
 
-                    <strong>
-                        ${product.name}
-                    </strong>
+        productInfo.append(nameElement, categoryElement);
+        productCell.appendChild(productInfo);
+        row.appendChild(productCell);
 
-                    <span>
-                        ${product.category}
-                    </span>
+        /* SKU, STOCK, WAREHOUSE */
+        row.appendChild(createCell(product.sku));
+        row.appendChild(createCell(product.stock));
+        row.appendChild(createCell(product.warehouse));
 
-                </div>
+        /* STATUS */
+        const statusCell = document.createElement("td");
+        const statusBadge = document.createElement("span");
+        const status = getStatus(product.stock);
 
-            </td>
+        statusBadge.className = `status ${getStatusClass(status)}`;
+        statusBadge.textContent = status;
 
+        statusCell.appendChild(statusBadge);
+        row.appendChild(statusCell);
 
-            <td>
-                ${product.sku}
-            </td>
+        /* ACTIONS */
+        const actionCell = document.createElement("td");
+        const actionContainer = document.createElement("div");
 
+        actionContainer.className = "inventory-actions";
 
-            <td>
-                ${product.stock}
-            </td>
+        actionContainer.append(
+            createActionButton("View", "view", product.sku),
+            createActionButton("Edit", "edit", product.sku),
+            createActionButton("Adjust Stock", "adjust", product.sku),
+            createActionButton("Change SKU", "change-sku", product.sku),
+            createActionButton("History", "history", product.sku)
+        );
 
-
-            <td>
-                ${product.warehouse}
-            </td>
-
-
-            <td>
-
-                <span class="status ${getStatusClass(status)}">
-                    ${status}
-                </span>
-
-            </td>
-
-
-            <td>
-
-                <button
-                    class="action-btn"
-                    data-sku="${product.sku}"
-                >
-                    View
-                </button>
-
-            </td>
-        `;
-
+        actionCell.appendChild(actionContainer);
+        row.appendChild(actionCell);
 
         inventoryTable.appendChild(row);
     });
 
+    emptyInventory.hidden = filteredProducts.length !== 0;
 
     updateStatistics();
 }
 
 
-/* ================================
-   UPDATE STATISTICS
-================================ */
+/* =========================================
+   STATISTICS
+========================================= */
 
 function updateStatistics() {
-
-    const totalProducts = products.length;
-
+    totalProductsElement.textContent =
+        products.length.toLocaleString();
 
     const totalStock = products.reduce(
-        (total, product) => {
-            return total + product.stock;
-        },
+        (sum, product) => sum + product.stock,
         0
     );
-
-
-    const lowStock = products.filter(
-        product => product.stock > 0 && product.stock <= 100
-    ).length;
-
-
-    const warehouses = new Set(
-        products.map(product => product.warehouse)
-    );
-
-
-    totalProductsElement.textContent =
-        totalProducts.toLocaleString();
-
 
     totalStockElement.textContent =
         totalStock.toLocaleString();
 
+    const lowStockCount = products.filter(
+        product => product.stock > 0 && product.stock <= 100
+    ).length;
 
     lowStockElement.textContent =
-        lowStock.toLocaleString();
+        lowStockCount.toLocaleString();
 
+    const warehouses = new Set(
+        products.map(product => product.warehouse)
+    );
 
     totalWarehousesElement.textContent =
         warehouses.size.toLocaleString();
 }
 
 
-/* ================================
-   OPEN MODAL
-================================ */
+/* =========================================
+   MODAL HELPERS
+========================================= */
 
-function openModal() {
-
+function openModal(modal) {
     modal.style.display = "flex";
+    modal.setAttribute("aria-hidden", "false");
 
     document.body.style.overflow = "hidden";
+}
 
+
+function closeModal(modal) {
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+
+    document.body.style.overflow = "";
+}
+
+
+function closeAllModals() {
+    closeProductModal();
+    closeStockAdjustmentModal();
+    closeSkuChangeModal();
+    closeStockHistoryModal();
+}
+
+
+/* =========================================
+   ADD / EDIT PRODUCT FORM
+========================================= */
+
+function resetProductForm() {
+    editingSku = null;
+
+    productForm.reset();
+
+    productSkuInput.readOnly = false;
+    productStockInput.disabled = false;
+
+    productModalTitle.textContent = "Add New Product";
+    productModalDescription.textContent =
+        "Add a product to your inventory";
+
+    productFormNotice.textContent =
+        "New products require a unique SKU. Existing product stock is managed separately.";
+
+    saveProductButton.textContent = "Add Product";
+}
+
+
+function openAddProductModal() {
+    resetProductForm();
+
+    openModal(productModal);
     productNameInput.focus();
 }
 
 
-/* ================================
-   CLOSE MODAL
-================================ */
+function openEditProductModal(sku) {
+    const product = getProductBySku(sku);
 
-function closeModal() {
+    if (!product) {
+        alert("Product not found.");
+        return;
+    }
 
-    modal.style.display = "none";
+    resetProductForm();
 
-    document.body.style.overflow = "";
+    editingSku = product.sku;
 
-    productForm.reset();
+    productNameInput.value = product.name;
+    productCategoryInput.value = product.category;
+    productSkuInput.value = product.sku;
+    productWarehouseInput.value = product.warehouse;
+    productStockInput.value = product.stock;
+
+    /*
+       SKU stays fixed in the normal edit form.
+       Stock can only be changed through Adjust Stock.
+    */
+    productSkuInput.readOnly = true;
+    productStockInput.disabled = true;
+
+    productModalTitle.textContent = "Edit Product";
+    productModalDescription.textContent =
+        "Update product details. SKU correction and stock changes are separate actions.";
+
+    productFormNotice.textContent =
+        "SKU cannot be changed here. Use Change SKU for a correction. Use Adjust Stock to change quantities.";
+
+    saveProductButton.textContent = "Save Changes";
+
+    openModal(productModal);
+    productNameInput.focus();
 }
 
 
-/* ================================
-   ADD PRODUCT
-================================ */
+function closeProductModal() {
+    closeModal(productModal);
+    resetProductForm();
+}
 
-function addProduct(event) {
 
+function saveProduct(event) {
     event.preventDefault();
 
-
-    const name =
-        productNameInput.value.trim();
-
-
-    const category =
-        productCategoryInput.value;
-
-
-    const sku =
-        productSkuInput.value.trim().toUpperCase();
-
-
-    const stock =
-        Number(productStockInput.value);
-
-
-    const warehouse =
-        productWarehouseInput.value;
-
-
-    /* VALIDATION */
+    const name = productNameInput.value.trim();
+    const category = productCategoryInput.value;
+    const sku = productSkuInput.value.trim().toUpperCase();
+    const warehouse = productWarehouseInput.value;
+    const stockText = productStockInput.value;
+    const stock = Number(stockText);
 
     if (!name || !category || !sku || !warehouse) {
-
-        alert("Please fill in all required fields.");
-
+        alert("Please complete all required fields.");
         return;
     }
 
-
-    if (
-        productStockInput.value === "" ||
-        stock < 0 ||
-        !Number.isInteger(stock)
-    ) {
-
-        alert("Please enter a valid stock quantity.");
-
-        return;
-    }
-
-
-    /* CHECK DUPLICATE SKU */
-
-    const skuExists = products.some(
-        product =>
-            product.sku.toLowerCase() === sku.toLowerCase()
-    );
-
-
-    if (skuExists) {
-
-        alert(
-            "This SKU already exists. Please use a unique SKU."
+    /* EDIT EXISTING PRODUCT */
+    if (editingSku !== null) {
+        const index = products.findIndex(
+            product => product.sku === editingSku
         );
 
+        if (index === -1) {
+            alert("The product could not be found.");
+            return;
+        }
+
+        const previousProduct = products[index];
+
+        const updatedProduct = {
+            ...previousProduct,
+            name,
+            category,
+            warehouse
+        };
+
+        const hasChanges =
+            updatedProduct.name !== previousProduct.name ||
+            updatedProduct.category !== previousProduct.category ||
+            updatedProduct.warehouse !== previousProduct.warehouse;
+
+        if (!hasChanges) {
+            alert("No changes detected. Nothing was saved.");
+            closeProductModal();
+            return;
+        }
+
+        const accepted = confirm(
+            "Save these product detail changes?\n\n" +
+            `Product: ${previousProduct.name}\n` +
+            `SKU: ${previousProduct.sku}\n\n` +
+            "The SKU and stock quantity will remain unchanged."
+        );
+
+        if (!accepted) {
+            return;
+        }
+
+        products[index] = updatedProduct;
+
+        if (!persistInventoryState()) {
+            products[index] = previousProduct;
+            return;
+        }
+
+        closeProductModal();
+        renderProducts();
+
+        alert("Product details updated successfully.");
         return;
     }
 
+    /* CREATE NEW PRODUCT */
+    if (
+        stockText === "" ||
+        !Number.isInteger(stock) ||
+        stock < 0
+    ) {
+        alert("Stock must be a whole number that is zero or greater.");
+        productStockInput.focus();
+        return;
+    }
 
-    /* CREATE PRODUCT */
+    const skuExists = products.some(
+        product => product.sku.toLowerCase() === sku.toLowerCase()
+    );
+
+    if (skuExists) {
+        alert("This SKU already exists. Please use a unique SKU.");
+        productSkuInput.focus();
+        return;
+    }
 
     const newProduct = {
-
-        name: name,
-
-        category: category,
-
-        sku: sku,
-
-        stock: stock,
-
-        warehouse: warehouse
+        name,
+        category,
+        sku,
+        stock,
+        warehouse
     };
 
+    products.unshift(newProduct);
 
-    products.push(newProduct);
+    if (!persistInventoryState()) {
+        products.shift();
+        return;
+    }
 
+    searchInput.value = "";
+    warehouseFilter.value = "All Warehouses";
+    statusFilter.value = "All Status";
 
-    /* UPDATE TABLE */
-
+    closeProductModal();
     renderProducts();
-
-
-    /* CLOSE FORM */
-
-    closeModal();
-
 
     alert("Product added successfully.");
 }
 
 
-/* ================================
+/* =========================================
    VIEW PRODUCT
-================================ */
+========================================= */
 
 function viewProduct(sku) {
-
-    const product = products.find(
-        item => item.sku === sku
-    );
-
+    const product = getProductBySku(sku);
 
     if (!product) {
+        alert("Product not found.");
         return;
     }
 
-
-    const status =
-        getStatus(product.stock);
-
-
     alert(
-        "Product: " + product.name +
-        "\n\n" +
-
-        "Category: " + product.category +
-        "\n" +
-
-        "SKU: " + product.sku +
-        "\n" +
-
-        "Stock: " + product.stock +
-        "\n" +
-
-        "Warehouse: " + product.warehouse +
-        "\n" +
-
-        "Status: " + status
+        `Product: ${product.name}\n\n` +
+        `Category: ${product.category}\n` +
+        `SKU: ${product.sku}\n` +
+        `Current Stock: ${product.stock}\n` +
+        `Warehouse: ${product.warehouse}\n` +
+        `Status: ${getStatus(product.stock)}`
     );
 }
 
 
-/* ================================
-   EVENT LISTENERS
-================================ */
+/* =========================================
+   STOCK ADJUSTMENT
+========================================= */
 
+function openStockAdjustmentModal(sku) {
+    const product = getProductBySku(sku);
+
+    if (!product) {
+        alert("Product not found.");
+        return;
+    }
+
+    adjustingSku = product.sku;
+
+    stockForm.reset();
+
+    adjustmentProductName.value = product.name;
+    adjustmentSku.value = product.sku;
+    adjustmentCurrentStock.value = product.stock;
+
+    adjustmentType.value = "add";
+    adjustmentQuantity.min = "1";
+    adjustmentQuantityLabel.textContent = "Quantity to Add";
+
+    openModal(stockModal);
+    adjustmentQuantity.focus();
+}
+
+
+function closeStockAdjustmentModal() {
+    closeModal(stockModal);
+    stockForm.reset();
+    adjustingSku = null;
+}
+
+
+function updateAdjustmentQuantityLabel() {
+    if (adjustmentType.value === "add") {
+        adjustmentQuantityLabel.textContent = "Quantity to Add";
+        adjustmentQuantity.min = "1";
+        adjustmentQuantity.placeholder = "Units to add";
+
+    } else if (adjustmentType.value === "remove") {
+        adjustmentQuantityLabel.textContent = "Quantity to Remove";
+        adjustmentQuantity.min = "1";
+        adjustmentQuantity.placeholder = "Units to remove";
+
+    } else {
+        adjustmentQuantityLabel.textContent = "Actual Counted Stock";
+        adjustmentQuantity.min = "0";
+        adjustmentQuantity.placeholder = "Enter physical count";
+    }
+
+    adjustmentQuantity.value = "";
+}
+
+
+function saveStockAdjustment(event) {
+    event.preventDefault();
+
+    const productIndex = products.findIndex(
+        product => product.sku === adjustingSku
+    );
+
+    if (productIndex === -1) {
+        alert("The selected product could not be found.");
+        closeStockAdjustmentModal();
+        return;
+    }
+
+    const product = products[productIndex];
+    const quantityText = adjustmentQuantity.value;
+    const quantity = Number(quantityText);
+    const type = adjustmentType.value;
+    const reason = adjustmentReason.value;
+    const notes = adjustmentNotes.value.trim();
+
+    if (
+        quantityText === "" ||
+        !Number.isInteger(quantity) ||
+        quantity < (type === "set" ? 0 : 1)
+    ) {
+        alert(
+            type === "set"
+                ? "Counted stock must be a whole number of zero or more."
+                : "Adjustment quantity must be a positive whole number."
+        );
+
+        adjustmentQuantity.focus();
+        return;
+    }
+
+    if (!reason) {
+        alert("Please select a reason for the stock adjustment.");
+        adjustmentReason.focus();
+        return;
+    }
+
+    let newStock;
+
+    if (type === "add") {
+        newStock = product.stock + quantity;
+
+    } else if (type === "remove") {
+        newStock = product.stock - quantity;
+
+    } else if (type === "set") {
+        newStock = quantity;
+
+    } else {
+        alert("Invalid adjustment type.");
+        return;
+    }
+
+    if (newStock < 0) {
+        alert(
+            `There are only ${product.stock} units available. ` +
+            "Stock cannot become negative."
+        );
+        adjustmentQuantity.focus();
+        return;
+    }
+
+    if (newStock === product.stock) {
+        alert("The adjustment would not change stock. Nothing was saved.");
+        return;
+    }
+
+    const change = newStock - product.stock;
+
+    const accepted = confirm(
+        "Confirm stock adjustment?\n\n" +
+        `Product: ${product.name}\n` +
+        `Current stock: ${product.stock}\n` +
+        `Stock change: ${change > 0 ? "+" : ""}${change}\n` +
+        `New stock: ${newStock}\n` +
+        `Reason: ${reason}\n\n` +
+        "This change will be recorded in stock history."
+    );
+
+    if (!accepted) {
+        return;
+    }
+
+    const previousStock = product.stock;
+    const previousHistory = stockHistory;
+
+    const historyRecord = {
+        id: `STK-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        sku: product.sku,
+        productName: product.name,
+        previousStock,
+        change,
+        newStock,
+        type,
+        reason,
+        notes,
+        timestamp: new Date().toISOString()
+    };
+
+    products[productIndex] = {
+        ...product,
+        stock: newStock
+    };
+
+    stockHistory = [...stockHistory, historyRecord];
+
+    if (!persistInventoryState()) {
+        products[productIndex] = product;
+        stockHistory = previousHistory;
+        return;
+    }
+
+    closeStockAdjustmentModal();
+    renderProducts();
+
+    alert(
+        "Stock adjusted successfully.\n\n" +
+        `Previous stock: ${previousStock}\n` +
+        `New stock: ${newStock}`
+    );
+}
+
+
+/* =========================================
+   SKU CORRECTION
+========================================= */
+
+function openSkuChangeModal(sku) {
+    const product = getProductBySku(sku);
+
+    if (!product) {
+        alert("Product not found.");
+        return;
+    }
+
+    changingSku = product.sku;
+
+    skuForm.reset();
+
+    skuChangeProductName.value = product.name;
+    skuChangeCurrent.value = product.sku;
+    skuChangeNew.value = product.sku;
+
+    openModal(skuModal);
+    skuChangeNew.focus();
+}
+
+
+function closeSkuChangeModal() {
+    closeModal(skuModal);
+    skuForm.reset();
+    changingSku = null;
+}
+
+
+function saveSkuChange(event) {
+    event.preventDefault();
+
+    const productIndex = products.findIndex(
+        product => product.sku === changingSku
+    );
+
+    if (productIndex === -1) {
+        alert("The selected product could not be found.");
+        closeSkuChangeModal();
+        return;
+    }
+
+    const product = products[productIndex];
+    const newSku = skuChangeNew.value.trim().toUpperCase();
+    const reason = skuChangeReason.value;
+    const notes = skuChangeNotes.value.trim();
+
+    if (!newSku || !reason) {
+        alert("Enter a new SKU and select a reason.");
+        return;
+    }
+
+    if (newSku === product.sku) {
+        alert("The new SKU is identical to the current SKU.");
+        return;
+    }
+
+    const duplicateSku = products.some(
+        item => item.sku.toLowerCase() === newSku.toLowerCase()
+    );
+
+    if (duplicateSku) {
+        alert("This SKU already belongs to another product.");
+        skuChangeNew.focus();
+        return;
+    }
+
+    const accepted = confirm(
+        "CONFIRM SKU CORRECTION\n\n" +
+        `Product: ${product.name}\n` +
+        `Current SKU: ${product.sku}\n` +
+        `New SKU: ${newSku}\n` +
+        `Reason: ${reason}\n\n` +
+        "The product's stock will not change.\n" +
+        "This correction updates the local inventory record only."
+    );
+
+    if (!accepted) {
+        return;
+    }
+
+    const previousProduct = products[productIndex];
+
+    products[productIndex] = {
+        ...product,
+        sku: newSku
+    };
+
+    /*
+       Record SKU corrections in the same stock-history collection
+       so the correction remains visible in the local audit trail.
+    */
+    const previousHistory = stockHistory;
+
+    stockHistory = [
+        ...stockHistory,
+        {
+            id: `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            sku: newSku,
+            previousSku: product.sku,
+            productName: product.name,
+            previousStock: product.stock,
+            change: 0,
+            newStock: product.stock,
+            type: "sku-correction",
+            reason,
+            notes: [
+                `Previous SKU: ${product.sku}`,
+                `New SKU: ${newSku}`,
+                notes
+            ].filter(Boolean).join(" | "),
+            timestamp: new Date().toISOString()
+        }
+    ];
+
+    if (!persistInventoryState()) {
+        products[productIndex] = previousProduct;
+        stockHistory = previousHistory;
+        return;
+    }
+
+    closeSkuChangeModal();
+    renderProducts();
+
+    alert(
+        "SKU corrected successfully.\n\n" +
+        `Previous SKU: ${product.sku}\n` +
+        `New SKU: ${newSku}\n\n` +
+        "Check any related orders or shipments before relying on this change."
+    );
+}
+
+
+/* =========================================
+   STOCK HISTORY
+========================================= */
+
+function openStockHistoryModal(sku) {
+    const product = getProductBySku(sku);
+
+    if (!product) {
+        alert("Product not found.");
+        return;
+    }
+
+    viewingHistorySku = sku;
+    historyProductTitle.textContent =
+        `${product.name} · ${product.sku}`;
+
+    renderStockHistory(sku);
+
+    openModal(historyModal);
+}
+
+
+function renderStockHistory(sku) {
+    const records = stockHistory
+        .filter(record =>
+            record.sku === sku ||
+            record.previousSku === sku
+        )
+        .sort((a, b) =>
+            new Date(b.timestamp).getTime() -
+            new Date(a.timestamp).getTime()
+        );
+
+    historyTable.replaceChildren();
+
+    records.forEach(record => {
+        const row = document.createElement("tr");
+
+        row.appendChild(
+            createCell(formatTimestamp(record.timestamp))
+        );
+
+        const skuText = record.previousSku
+            ? `${record.previousSku} → ${record.sku}`
+            : record.sku;
+
+        row.appendChild(createCell(skuText));
+
+        const changeText = record.type === "sku-correction"
+            ? "SKU correction"
+            : `${record.change > 0 ? "+" : ""}${record.change}`;
+
+        row.appendChild(createCell(changeText));
+
+        row.appendChild(createCell(record.previousStock));
+
+        row.appendChild(createCell(record.newStock));
+
+        const reasonCell = document.createElement("td");
+        reasonCell.textContent = [
+            record.reason || "No reason",
+            record.notes || ""
+        ].filter(Boolean).join(" — ");
+
+        row.appendChild(reasonCell);
+
+        historyTable.appendChild(row);
+    });
+
+    emptyHistory.hidden = records.length !== 0;
+}
+
+
+function closeStockHistoryModal() {
+    closeModal(historyModal);
+    viewingHistorySku = null;
+}
+
+
+/* =========================================
+   EVENT LISTENERS
+========================================= */
+
+/* Product form */
 addProductButton.addEventListener(
     "click",
-    openModal
+    openAddProductModal
 );
 
-
-closeModalButton.addEventListener(
+closeProductButton.addEventListener(
     "click",
-    closeModal
+    closeProductModal
 );
 
-
-cancelButton.addEventListener(
+cancelProductButton.addEventListener(
     "click",
-    closeModal
+    closeProductModal
 );
-
 
 productForm.addEventListener(
     "submit",
-    addProduct
+    saveProduct
 );
 
 
+/* Stock adjustment form */
+adjustmentType.addEventListener(
+    "change",
+    updateAdjustmentQuantityLabel
+);
+
+closeStockButton.addEventListener(
+    "click",
+    closeStockAdjustmentModal
+);
+
+cancelStockButton.addEventListener(
+    "click",
+    closeStockAdjustmentModal
+);
+
+stockForm.addEventListener(
+    "submit",
+    saveStockAdjustment
+);
+
+
+/* SKU correction form */
+closeSkuButton.addEventListener(
+    "click",
+    closeSkuChangeModal
+);
+
+cancelSkuButton.addEventListener(
+    "click",
+    closeSkuChangeModal
+);
+
+skuForm.addEventListener(
+    "submit",
+    saveSkuChange
+);
+
+
+/* Stock history modal */
+closeHistoryButton.addEventListener(
+    "click",
+    closeStockHistoryModal
+);
+
+closeHistoryBottomButton.addEventListener(
+    "click",
+    closeStockHistoryModal
+);
+
+
+/* Search and filters */
 searchInput.addEventListener(
     "input",
     renderProducts
 );
 
-
 warehouseFilter.addEventListener(
     "change",
     renderProducts
 );
-
 
 statusFilter.addEventListener(
     "change",
@@ -490,69 +1210,60 @@ statusFilter.addEventListener(
 );
 
 
-/* ================================
-   TABLE ACTION
-================================ */
+/* Table actions */
+inventoryTable.addEventListener("click", event => {
+    const button = event.target.closest("button[data-action]");
 
-inventoryTable.addEventListener(
-    "click",
-    event => {
+    if (!button) {
+        return;
+    }
 
-        const button =
-            event.target.closest(".action-btn");
+    const sku = button.dataset.sku;
+    const action = button.dataset.action;
 
-
-        if (!button) {
-            return;
-        }
-
-
-        const sku =
-            button.dataset.sku;
-
-
+    if (action === "view") {
         viewProduct(sku);
+
+    } else if (action === "edit") {
+        openEditProductModal(sku);
+
+    } else if (action === "adjust") {
+        openStockAdjustmentModal(sku);
+
+    } else if (action === "change-sku") {
+        openSkuChangeModal(sku);
+
+    } else if (action === "history") {
+        openStockHistoryModal(sku);
     }
-);
+});
 
 
-/* ================================
-   CLOSE MODAL
-   WHEN CLICKING OUTSIDE
-================================ */
-
-modal.addEventListener(
-    "click",
-    event => {
-
+/* Click outside any modal to close it */
+[
+    productModal,
+    stockModal,
+    skuModal,
+    historyModal
+].forEach(modal => {
+    modal.addEventListener("click", event => {
         if (event.target === modal) {
-            closeModal();
+            closeAllModals();
         }
+    });
+});
+
+
+/* Escape closes active modals */
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        closeAllModals();
     }
-);
+});
 
 
-/* ================================
-   ESC KEY
-================================ */
-
-document.addEventListener(
-    "keydown",
-    event => {
-
-        if (
-            event.key === "Escape" &&
-            modal.style.display === "flex"
-        ) {
-
-            closeModal();
-        }
-    }
-);
-
-
-/* 
-   INITIAL LOAD
- */
+/* =========================================
+   INITIALIZE
+========================================= */
 
 renderProducts();

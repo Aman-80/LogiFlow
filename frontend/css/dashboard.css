@@ -650,3 +650,77 @@ tbody tr:hover {
         height: 34px;
     }
 }
+
+
+/* =========================================
+   LOGIFLOW STANDARD FIXED SIDEBAR
+   LOCKED DESIGN RULE
+========================================= */
+
+/* DESKTOP */
+@media (min-width: 701px) {
+
+    .dashboard,
+    .orders-page,
+    .shipments-page {
+        display: block;
+        min-height: 100vh;
+    }
+
+    .dashboard .sidebar,
+    .orders-page .sidebar,
+    .shipments-page .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+
+        width: 250px;
+        height: 100vh;
+        min-height: 0;
+
+        overflow-y: auto;
+        overscroll-behavior: contain;
+
+        z-index: 1000;
+    }
+
+    .dashboard .main-content,
+    .orders-page .main-content,
+    .shipments-page .main-content {
+        width: calc(100% - 250px);
+        margin-left: 250px;
+
+        min-width: 0;
+    }
+}
+
+
+/* MOBILE */
+@media (max-width: 700px) {
+
+    .dashboard,
+    .orders-page,
+    .shipments-page {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard .sidebar,
+    .orders-page .sidebar,
+    .shipments-page .sidebar {
+        position: static;
+
+        width: 100%;
+        height: auto;
+        min-height: auto;
+
+        overflow: visible;
+    }
+
+    .dashboard .main-content,
+    .orders-page .main-content,
+    .shipments-page .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+}

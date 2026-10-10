@@ -1,365 +1,157 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>LogiFlow | Inventory</title>
 
-    <link
-        rel="stylesheet"
-        href="css/inventory.css"
-    >
-
+    <link rel="stylesheet" href="css/inventory.css">
 </head>
-
 
 <body>
 
     <div class="inventory-page">
 
-
         <!-- SIDEBAR -->
-
         <aside class="sidebar">
 
             <div class="logo">
-
-                <span class="logo-mark">
-                    L
-                </span>
-
-                <span class="logo-logi">
-                    Logi
-                </span>
-
-                <span class="logo-flow">
-                    Flow
-                </span>
-
+                <span class="logo-mark">L</span><span class="logo-logi">Logi</span><span class="logo-flow">Flow</span>
             </div>
 
-
             <nav class="navigation">
-
-                <a
-                    href="dashboard.html"
-                    class="nav-item"
-                >
-                    Dashboard
-                </a>
-
-
-                <a
-                    href="inventory.html"
-                    class="nav-item active"
-                >
-                    Inventory
-                </a>
-
-
-                <a
-                    href="orders.html"
-                    class="nav-item"
-                >
-                    Orders
-                </a>
-
-
-                <a
-                    href="shipments.html"
-                    class="nav-item"
-                >
-                    Shipments
-                </a>
-
-
-                <a
-                    href="warehouses.html"
-                    class="nav-item"
-                >
-                    Warehouses
-                </a>
-
-
-                <a
-                    href="deliveries.html"
-                    class="nav-item"
-                >
-                    Deliveries
-                </a>
-
+                <a href="dashboard.html" class="nav-item">Dashboard</a>
+                <a href="inventory.html" class="nav-item active">Inventory</a>
+                <a href="orders.html" class="nav-item">Orders</a>
+                <a href="shipments.html" class="nav-item">Shipments</a>
+                <a href="warehouses.html" class="nav-item">Warehouses</a>
+                <a href="deliveries.html" class="nav-item">Deliveries</a>
             </nav>
 
-
             <div class="sidebar-bottom">
-
-                <a
-                    href="index.html"
-                    class="nav-item"
-                >
-                    Logout
-                </a>
-
+                <a href="index.html" class="nav-item">Logout</a>
             </div>
 
         </aside>
 
 
-
         <!-- MAIN CONTENT -->
-
         <main class="main-content">
 
-
-            <!-- TOPBAR -->
-
             <header class="topbar">
-
                 <div>
-
-                    <h1>
-                        Inventory
-                    </h1>
-
-                    <p>
-                        Manage products and stock across your warehouses
-                    </p>
-
+                    <h1>Inventory</h1>
+                    <p>Manage products and stock across your warehouses</p>
                 </div>
 
-
-                <div class="user-info">
-                    Admin
-                </div>
-
+                <div class="user-info">Admin</div>
             </header>
 
 
-
             <!-- INVENTORY STATISTICS -->
-
             <section class="inventory-stats">
 
-
                 <div class="stat-card">
-
-                    <p>
-                        Total Products
-                    </p>
-
-                    <h2 id="total-products">
-                        1,248
-                    </h2>
-
-                    <span>
-                        Active products
-                    </span>
-
+                    <p>Total Products</p>
+                    <h2 id="total-products">0</h2>
+                    <span>Recorded products</span>
                 </div>
 
-
                 <div class="stat-card">
-
-                    <p>
-                        Total Stock
-                    </p>
-
-                    <h2 id="total-stock">
-                        8,642
-                    </h2>
-
-                    <span>
-                        Units available
-                    </span>
-
+                    <p>Total Stock</p>
+                    <h2 id="total-stock">0</h2>
+                    <span>Units available</span>
                 </div>
 
-
                 <div class="stat-card">
-
-                    <p>
-                        Low Stock
-                    </p>
-
-                    <h2 id="low-stock">
-                        24
-                    </h2>
-
-                    <span>
-                        Need attention
-                    </span>
-
+                    <p>Low Stock</p>
+                    <h2 id="low-stock">0</h2>
+                    <span>Need attention</span>
                 </div>
 
-
                 <div class="stat-card">
-
-                    <p>
-                        Warehouses
-                    </p>
-
-                    <h2 id="total-warehouses">
-                        8
-                    </h2>
-
-                    <span>
-                        Active locations
-                    </span>
-
+                    <p>Warehouses</p>
+                    <h2 id="total-warehouses">0</h2>
+                    <span>Locations holding stock</span>
                 </div>
 
             </section>
 
 
-
             <!-- INVENTORY PANEL -->
-
             <section class="inventory-panel">
 
-
-                <!-- PANEL HEADER -->
-
                 <div class="panel-header">
-
                     <div>
-
-                        <h2>
-                            Products
-                        </h2>
-
-                        <p>
-                            View and manage your inventory
-                        </p>
-
+                        <h2>Products</h2>
+                        <p>Manage product details, stock levels and changes</p>
                     </div>
 
-
                     <button
-                        class="add-product-btn"
-                        id="open-product-modal"
                         type="button"
-                    >
+                        class="add-product-btn"
+                        id="open-product-modal">
                         Add Product
                     </button>
-
                 </div>
-
 
 
                 <!-- SEARCH AND FILTERS -->
-
                 <div class="inventory-controls">
 
-
                     <div class="search-box">
-
                         <input
-                            type="text"
+                            type="search"
                             id="search-product"
                             placeholder="Search products..."
-                        >
-
+                            aria-label="Search products">
                     </div>
 
-
-                    <select id="warehouse-filter">
-
-                        <option value="All Warehouses">
-                            All Warehouses
-                        </option>
-
-                        <option value="Delhi Warehouse">
-                            Delhi Warehouse
-                        </option>
-
-                        <option value="Chandigarh Warehouse">
-                            Chandigarh Warehouse
-                        </option>
-
-                        <option value="Mumbai Warehouse">
-                            Mumbai Warehouse
-                        </option>
-
+                    <select id="warehouse-filter" aria-label="Filter by warehouse">
+                        <option value="All Warehouses">All Warehouses</option>
+                        <option value="Delhi Warehouse">Delhi Warehouse</option>
+                        <option value="Chandigarh Warehouse">Chandigarh Warehouse</option>
+                        <option value="Mumbai Warehouse">Mumbai Warehouse</option>
                     </select>
 
-
-                    <select id="status-filter">
-
-                        <option value="All Status">
-                            All Status
-                        </option>
-
-                        <option value="In Stock">
-                            In Stock
-                        </option>
-
-                        <option value="Low Stock">
-                            Low Stock
-                        </option>
-
-                        <option value="Out of Stock">
-                            Out of Stock
-                        </option>
-
+                    <select id="status-filter" aria-label="Filter by stock status">
+                        <option value="All Status">All Status</option>
+                        <option value="In Stock">In Stock</option>
+                        <option value="Low Stock">Low Stock</option>
+                        <option value="Out of Stock">Out of Stock</option>
                     </select>
 
                 </div>
 
 
-
                 <!-- INVENTORY TABLE -->
-
                 <div class="table-container">
 
                     <table>
 
                         <thead>
-
                             <tr>
-
-                                <th>
-                                    Product
-                                </th>
-
-                                <th>
-                                    SKU
-                                </th>
-
-                                <th>
-                                    Stock
-                                </th>
-
-                                <th>
-                                    Warehouse
-                                </th>
-
-                                <th>
-                                    Status
-                                </th>
-
-                                <th>
-                                    Action
-                                </th>
-
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Stock</th>
+                                <th>Warehouse</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-
                         </thead>
 
-
                         <tbody id="inventory-table-body">
-
-                            <!-- Products generated by JavaScript -->
-
+                            <!-- Generated by inventory.js -->
                         </tbody>
 
                     </table>
+
+                    <p id="empty-inventory" class="empty-state" hidden>
+                        No products match your search.
+                    </p>
 
                 </div>
 
@@ -370,212 +162,112 @@
     </div>
 
 
+    <!-- ADD / EDIT PRODUCT MODAL -->
+    <div class="modal-overlay" id="product-modal" aria-hidden="true">
 
-    <!-- ADD PRODUCT MODAL -->
-
-    <div
-        class="modal-overlay"
-        id="product-modal"
-    >
-
-        <div class="product-modal">
-
-
-            <!-- MODAL HEADER -->
+        <section
+            class="product-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-modal-title">
 
             <div class="modal-header">
 
                 <div>
-
-                    <h2>
-                        Add New Product
-                    </h2>
-
-                    <p>
-                        Add a product to your inventory
-                    </p>
-
+                    <h2 id="product-modal-title">Add New Product</h2>
+                    <p>Add a product to your inventory</p>
                 </div>
-
 
                 <button
                     type="button"
                     class="close-modal"
                     id="close-product-modal"
-                >
+                    aria-label="Close product form">
                     ×
                 </button>
 
             </div>
 
 
-
-            <!-- PRODUCT FORM -->
-
             <form id="product-form">
-
-
-                <!-- ROW 1 -->
 
                 <div class="form-row">
 
-
                     <div class="form-group">
-
-                        <label for="product-name">
-                            Product Name
-                        </label>
-
+                        <label for="product-name">Product Name</label>
                         <input
                             type="text"
                             id="product-name"
                             placeholder="Enter product name"
-                            required
-                        >
-
+                            maxlength="120"
+                            required>
                     </div>
 
-
                     <div class="form-group">
-
-                        <label for="product-category">
-                            Category
-                        </label>
-
-                        <select
-                            id="product-category"
-                            required
-                        >
-
-                            <option value="">
-                                Select category
-                            </option>
-
-                            <option value="Electronics">
-                                Electronics
-                            </option>
-
-                            <option value="Accessories">
-                                Accessories
-                            </option>
-
-                            <option value="Furniture">
-                                Furniture
-                            </option>
-
-                            <option value="Warehouse Equipment">
-                                Warehouse Equipment
-                            </option>
-
-                            <option value="Office Supplies">
-                                Office Supplies
-                            </option>
-
-                            <option value="Other">
-                                Other
-                            </option>
-
+                        <label for="product-category">Category</label>
+                        <select id="product-category" required>
+                            <option value="">Select category</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Accessories">Accessories</option>
+                            <option value="Furniture">Furniture</option>
+                            <option value="Warehouse Equipment">Warehouse Equipment</option>
+                            <option value="Office Supplies">Office Supplies</option>
+                            <option value="Other">Other</option>
                         </select>
-
                     </div>
 
                 </div>
 
 
-
-                <!-- ROW 2 -->
-
                 <div class="form-row">
 
-
                     <div class="form-group">
-
-                        <label for="product-sku">
-                            SKU
-                        </label>
-
+                        <label for="product-sku">SKU</label>
                         <input
                             type="text"
                             id="product-sku"
                             placeholder="Example: LF-PRD-007"
-                            required
-                        >
-
+                            maxlength="80"
+                            required>
                     </div>
 
-
                     <div class="form-group">
-
-                        <label for="product-stock">
-                            Stock Quantity
-                        </label>
-
+                        <label for="product-stock">Stock Quantity</label>
                         <input
                             type="number"
                             id="product-stock"
                             placeholder="Enter quantity"
                             min="0"
-                            required
-                        >
-
+                            step="1"
+                            required>
                     </div>
 
                 </div>
 
 
-
-                <!-- WAREHOUSE -->
-
                 <div class="form-group">
-
-                    <label for="product-warehouse">
-                        Warehouse
-                    </label>
-
-                    <select
-                        id="product-warehouse"
-                        required
-                    >
-
-                        <option value="">
-                            Select warehouse
-                        </option>
-
-                        <option value="Delhi Warehouse">
-                            Delhi Warehouse
-                        </option>
-
-                        <option value="Chandigarh Warehouse">
-                            Chandigarh Warehouse
-                        </option>
-
-                        <option value="Mumbai Warehouse">
-                            Mumbai Warehouse
-                        </option>
-
+                    <label for="product-warehouse">Warehouse</label>
+                    <select id="product-warehouse" required>
+                        <option value="">Select warehouse</option>
+                        <option value="Delhi Warehouse">Delhi Warehouse</option>
+                        <option value="Chandigarh Warehouse">Chandigarh Warehouse</option>
+                        <option value="Mumbai Warehouse">Mumbai Warehouse</option>
                     </select>
-
                 </div>
 
 
+                <p class="form-notice" id="product-form-notice">
+                    New products require a unique SKU. Existing product stock is managed separately.
+                </p>
 
-                <!-- FORM ACTIONS -->
 
                 <div class="form-actions">
 
-                    <button
-                        type="button"
-                        class="cancel-btn"
-                        id="cancel-product"
-                    >
+                    <button type="button" class="cancel-btn" id="cancel-product">
                         Cancel
                     </button>
 
-
-                    <button
-                        type="submit"
-                        class="save-product-btn"
-                    >
+                    <button type="submit" class="save-product-btn">
                         Add Product
                     </button>
 
@@ -583,16 +275,310 @@
 
             </form>
 
-        </div>
+        </section>
 
     </div>
 
 
+    <!-- ADJUST STOCK MODAL -->
+    <div class="modal-overlay" id="stock-adjustment-modal" aria-hidden="true">
 
-    <!-- JAVASCRIPT -->
+        <section
+            class="product-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="stock-adjustment-title">
+
+            <div class="modal-header">
+
+                <div>
+                    <h2 id="stock-adjustment-title">Adjust Stock</h2>
+                    <p>Record a stock change with a reason</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="close-modal"
+                    id="close-stock-adjustment"
+                    aria-label="Close stock adjustment">
+                    ×
+                </button>
+
+            </div>
+
+
+            <form id="stock-adjustment-form">
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="adjustment-product-name">Product</label>
+                        <input id="adjustment-product-name" type="text" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adjustment-sku">SKU</label>
+                        <input id="adjustment-sku" type="text" readonly>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+                    <label for="adjustment-current-stock">Current Stock</label>
+                    <input id="adjustment-current-stock" type="number" readonly>
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="adjustment-type">Adjustment Type</label>
+                        <select id="adjustment-type" required>
+                            <option value="add">Add Stock</option>
+                            <option value="remove">Remove Stock</option>
+                            <option value="set">Set Counted Stock</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adjustment-quantity" id="adjustment-quantity-label">
+                            Quantity
+                        </label>
+                        <input
+                            id="adjustment-quantity"
+                            type="number"
+                            min="1"
+                            step="1"
+                            placeholder="Enter quantity"
+                            required>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+                    <label for="adjustment-reason">Reason</label>
+                    <select id="adjustment-reason" required>
+                        <option value="">Select reason</option>
+                        <option value="Stock received">Stock received</option>
+                        <option value="Customer return">Customer return</option>
+                        <option value="Damaged stock">Damaged stock</option>
+                        <option value="Expired stock">Expired stock</option>
+                        <option value="Physical stock count correction">
+                            Physical stock count correction
+                        </option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+
+                <div class="form-group">
+                    <label for="adjustment-notes">Notes (optional)</label>
+                    <textarea
+                        id="adjustment-notes"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Explain the adjustment if needed"></textarea>
+                </div>
+
+
+                <p class="form-notice">
+                    Stock changes are recorded in the adjustment history.
+                    Review the new quantity before confirming.
+                </p>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="button"
+                        class="cancel-btn"
+                        id="cancel-stock-adjustment">
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="save-product-btn">
+                        Confirm Adjustment
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+
+    <!-- CHANGE SKU MODAL -->
+    <div class="modal-overlay" id="sku-change-modal" aria-hidden="true">
+
+        <section
+            class="product-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sku-change-title">
+
+            <div class="modal-header">
+
+                <div>
+                    <h2 id="sku-change-title">Change Product SKU</h2>
+                    <p>Correct the product identifier carefully</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="close-modal"
+                    id="close-sku-change"
+                    aria-label="Close SKU correction">
+                    ×
+                </button>
+
+            </div>
+
+
+            <form id="sku-change-form">
+
+                <div class="form-group">
+                    <label for="sku-change-product-name">Product</label>
+                    <input id="sku-change-product-name" type="text" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="sku-change-current">Current SKU</label>
+                    <input id="sku-change-current" type="text" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="sku-change-new">New SKU</label>
+                    <input
+                        id="sku-change-new"
+                        type="text"
+                        maxlength="80"
+                        placeholder="Enter corrected SKU"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sku-change-reason">Reason for Change</label>
+                    <select id="sku-change-reason" required>
+                        <option value="">Select reason</option>
+                        <option value="Original SKU entered incorrectly">
+                            Original SKU entered incorrectly
+                        </option>
+                        <option value="Product label replaced">Product label replaced</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sku-change-notes">Notes (optional)</label>
+                    <textarea
+                        id="sku-change-notes"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Additional details"></textarea>
+                </div>
+
+                <p class="form-notice">
+                    The new SKU must be unique. Confirm the correction carefully.
+                    Existing records in other modules will require backend coordination later.
+                </p>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="button"
+                        class="cancel-btn"
+                        id="cancel-sku-change">
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="save-product-btn">
+                        Confirm SKU Change
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+
+    <!-- STOCK HISTORY MODAL -->
+    <div class="modal-overlay" id="stock-history-modal" aria-hidden="true">
+
+        <section
+            class="product-modal history-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="stock-history-title">
+
+            <div class="modal-header">
+
+                <div>
+                    <h2 id="stock-history-title">Stock Adjustment History</h2>
+                    <p id="stock-history-product-title">Product history</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="close-modal"
+                    id="close-stock-history"
+                    aria-label="Close stock history">
+                    ×
+                </button>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Date and Time</th>
+                            <th>SKU</th>
+                            <th>Change</th>
+                            <th>Previous</th>
+                            <th>New Stock</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="stock-history-table-body">
+                        <!-- History generated by JavaScript -->
+                    </tbody>
+
+                </table>
+
+                <p id="empty-stock-history" class="empty-state" hidden>
+                    No stock adjustments recorded for this product yet.
+                </p>
+
+            </div>
+
+
+            <div class="form-actions">
+                <button
+                    type="button"
+                    class="cancel-btn"
+                    id="close-stock-history-bottom">
+                    Close
+                </button>
+            </div>
+
+        </section>
+
+    </div>
+
 
     <script src="js/inventory.js"></script>
 
 </body>
-
 </html>

@@ -948,3 +948,218 @@ tbody tr:last-child td {
     }
 
 }
+
+
+/* =========================================
+   INVENTORY ACTION BUTTONS
+========================================= */
+
+.inventory-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.inventory-actions .action-btn {
+    white-space: nowrap;
+}
+
+
+/* =========================================
+   FORM NOTICES
+========================================= */
+
+.form-notice {
+    padding: 12px 14px;
+    border: 1px solid #dce7eb;
+    border-radius: 8px;
+    background: #f5f9fa;
+    color: #526873;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+
+/* =========================================
+   DISABLED AND READ-ONLY FIELDS
+========================================= */
+
+.form-group input:disabled,
+.form-group input:read-only {
+    background: #f1f4f5;
+    color: #687780;
+    cursor: not-allowed;
+}
+
+.form-group input:disabled:focus,
+.form-group input:read-only:focus {
+    border-color: #d5dde1;
+    box-shadow: none;
+}
+
+
+/* =========================================
+   TEXT AREAS
+========================================= */
+
+.form-group textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 12px 13px;
+
+    border: 1px solid #d5dde1;
+    border-radius: 8px;
+
+    background: #ffffff;
+    color: #17212b;
+
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+
+    resize: vertical;
+    outline: none;
+
+    transition: 0.2s ease;
+}
+
+.form-group textarea::placeholder {
+    color: #9ca7ad;
+}
+
+.form-group textarea:focus {
+    border-color: #203b45;
+    box-shadow: 0 0 0 3px rgba(32, 59, 69, 0.08);
+}
+
+
+/* =========================================
+   STOCK HISTORY MODAL
+========================================= */
+
+.history-modal {
+    width: 100%;
+    max-width: 950px;
+}
+
+.history-modal .table-container {
+    margin-top: 10px;
+}
+
+.history-modal table {
+    min-width: 760px;
+}
+
+.history-modal th,
+.history-modal td {
+    padding: 13px 12px;
+}
+
+
+/* =========================================
+   EMPTY STATES
+========================================= */
+
+.empty-state {
+    padding: 28px 12px;
+    text-align: center;
+    color: #7a858d;
+    font-size: 14px;
+}
+
+
+/* =========================================
+   ACCESSIBILITY AND INTERACTION
+========================================= */
+
+.action-btn:focus-visible,
+.add-product-btn:focus-visible,
+.save-product-btn:focus-visible,
+.cancel-btn:focus-visible,
+.close-modal:focus-visible {
+    outline: 3px solid rgba(54, 111, 135, 0.4);
+    outline-offset: 2px;
+}
+
+
+/* =========================================
+   SMALL-SCREEN ADJUSTMENTS
+========================================= */
+
+@media (max-width: 700px) {
+    .inventory-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .inventory-actions .action-btn {
+        width: 100%;
+    }
+
+    .history-modal {
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+}
+
+
+/* =========================================
+   FIXED INVENTORY SIDEBAR
+========================================= */
+
+/* Desktop: keep the sidebar stationary */
+@media (min-width: 701px) {
+
+    .inventory-page {
+        display: block;
+        min-height: 100vh;
+    }
+
+    .inventory-page .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+
+        width: 250px;
+        height: 100vh;
+        min-height: 0;
+
+        overflow-y: auto;
+        overscroll-behavior: contain;
+
+        z-index: 1000;
+    }
+
+    .inventory-page .main-content {
+        width: calc(100% - 250px);
+        margin-left: 250px;
+
+        min-width: 0;
+    }
+}
+
+
+/* Mobile: keep the existing stacked layout */
+@media (max-width: 700px) {
+
+    .inventory-page {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .inventory-page .sidebar {
+        position: static;
+
+        width: 100%;
+        height: auto;
+        min-height: auto;
+
+        overflow: visible;
+    }
+
+    .inventory-page .main-content {
+        width: 100%;
+        margin-left: 0;
+    }
+}
