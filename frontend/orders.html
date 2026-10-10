@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LogiFlow | Orders</title>
+
+    <link rel="stylesheet" href="css/orders.css">
+</head>
+
+<body>
+
+    <div class="orders-page">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <span class="logo-mark">L</span><span class="logo-logi">Logi</span><span class="logo-flow">Flow</span>
+            </div>
+
+            <nav class="navigation">
+                <a href="dashboard.html" class="nav-item">Dashboard</a>
+                <a href="inventory.html" class="nav-item">Inventory</a>
+                <a href="orders.html" class="nav-item active">Orders</a>
+                <a href="shipments.html" class="nav-item">Shipments</a>
+                <a href="warehouses.html" class="nav-item">Warehouses</a>
+                <a href="deliveries.html" class="nav-item">Deliveries</a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <a href="index.html" class="nav-item">Logout</a>
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <header class="topbar">
+
+                <div>
+                    <h1>Orders</h1>
+                    <p>Create and manage customer orders</p>
+                </div>
+
+                <div class="user-info">Admin</div>
+
+            </header>
+
+
+            <!-- ORDER STATISTICS -->
+            <section class="order-stats">
+
+                <div class="stat-card">
+                    <p>Total Orders</p>
+                    <h2 id="total-orders">6</h2>
+                    <span>All recorded orders</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Pending</p>
+                    <h2 id="pending-orders">2</h2>
+                    <span>Awaiting processing</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Processing</p>
+                    <h2 id="processing-orders">2</h2>
+                    <span>Being prepared</span>
+                </div>
+
+                <div class="stat-card">
+                    <p>Completed</p>
+                    <h2 id="completed-orders">2</h2>
+                    <span>Delivered orders</span>
+                </div>
+
+            </section>
+
+
+            <!-- ORDERS PANEL -->
+            <section class="orders-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>All Orders</h2>
+                        <p>Track customer orders and their current status</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="add-order-btn"
+                        id="open-order-modal">
+                        + Add Order
+                    </button>
+
+                </div>
+
+
+                <!-- SEARCH AND FILTERS -->
+                <div class="orders-controls">
+
+                    <div class="search-box">
+                        <input
+                            type="search"
+                            id="search-order"
+                            placeholder="Search order ID or customer..."
+                            aria-label="Search orders">
+                    </div>
+
+                    <select id="status-filter" aria-label="Filter by status">
+                        <option value="All Status">All Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+
+                </div>
+
+
+                <!-- ORDERS TABLE -->
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Quantity</th>
+                                <th>Order Amount</th>
+                                <th>Order Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="orders-table-body">
+                            <!-- Order rows will be rendered by JavaScript -->
+                        </tbody>
+
+                    </table>
+
+                    <p id="empty-orders" class="empty-state" hidden>
+                        No orders match your search.
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!-- ADD ORDER MODAL -->
+    <div
+        class="modal-overlay"
+        id="order-modal"
+        aria-hidden="true">
+
+        <section
+            class="order-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-modal-title">
+
+            <div class="modal-header">
+
+                <div>
+                    <h2 id="order-modal-title">Create New Order</h2>
+                    <p>Enter the customer and order details</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="close-modal"
+                    id="close-order-modal"
+                    aria-label="Close form">
+                    ×
+                </button>
+
+            </div>
+
+
+            <form id="order-form">
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="customer-name">Customer Name</label>
+                        <input
+                            type="text"
+                            id="customer-name"
+                            placeholder="Enter customer name"
+                            maxlength="100"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-email">Customer Email</label>
+                        <input
+                            type="email"
+                            id="customer-email"
+                            placeholder="customer@example.com"
+                            maxlength="254"
+                            required>
+                    </div>
+
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="order-product">Product</label>
+                        <input
+                            type="text"
+                            id="order-product"
+                            placeholder="Enter product name"
+                            maxlength="120"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-quantity">Quantity</label>
+                        <input
+                            type="number"
+                            id="order-quantity"
+                            placeholder="Enter quantity"
+                            min="1"
+                            step="1"
+                            required>
+                    </div>
+
+                </div>
+
+
+                <div class="form-row">
+
+                    <div class="form-group">
+                        <label for="order-amount">Order Amount (INR)</label>
+                        <input
+                            type="number"
+                            id="order-amount"
+                            placeholder="Enter total amount"
+                            min="0.01"
+                            step="0.01"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-date">Order Date</label>
+                        <input
+                            type="date"
+                            id="order-date"
+                            required>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+                    <label for="order-status">Order Status</label>
+                    <select id="order-status" required>
+                        <option value="Pending">Pending</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="button"
+                        class="cancel-btn"
+                        id="cancel-order">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="save-order-btn">
+                        Create Order
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+    </div>
+
+
+    <script src="js/orders.js"></script>
+
+</body>
+</html>
