@@ -244,6 +244,7 @@ const LOCATION_DATA = {
         }
     },
 
+    
     AE: {
         states: [
             "Abu Dhabi", "Dubai", "Sharjah", "Ajman",
@@ -256,8 +257,34 @@ const LOCATION_DATA = {
             "sharjah": { name: "Sharjah", state: "Sharjah" },
             "ajman": { name: "Ajman", state: "Ajman" }
         }
+    },
+    ES: {
+        states: [
+            "Andalusia", "Aragon", "Asturias", "Balearic Islands",
+            "Basque Country", "Canary Islands", "Cantabria",
+            "Castile and Leon", "Castile-La Mancha", "Catalonia",
+            "Extremadura", "Galicia", "La Rioja",
+            "Community of Madrid", "Region of Murcia", "Navarre",
+            "Valencian Community", "Ceuta", "Melilla"
+        ],
+        aliases: {
+            "madrid": "Community of Madrid",
+            "comunidad de madrid": "Community of Madrid",
+            "cataluna": "Catalonia"
+        },
+        cities: {
+            "madrid": { name: "Madrid", state: "Community of Madrid" },
+            "barcelona": { name: "Barcelona", state: "Catalonia" },
+            "valencia": { name: "Valencia", state: "Valencian Community" },
+            "seville": { name: "Seville", state: "Andalusia" },
+            "malaga": { name: "Malaga", state: "Andalusia" },
+            "zaragoza": { name: "Zaragoza", state: "Aragon" },
+            "bilbao": { name: "Bilbao", state: "Basque Country" },
+            "alicante": { name: "Alicante", state: "Valencian Community" }
+        }
     }
 };
+
 
 
 /* =========================================
@@ -576,53 +603,71 @@ function refreshLocationSuggestions() {
 }
 
 function validateAddress(data) {
-    const config = getLocationConfig(data.destinationCountry);
+    const country = data.destinationCountry;
+    const config = getLocationConfig(country);
 
-    if (!config) {
+    if (!country || !config) {
         return {
             error: "",
-            warning: "This country does not have local reference data. Verify the address carefully before saving."
+            warning: "Country could not be verified using the local reference data. Please confirm the address before saving."
         };
     }
 
-    const region = canonicalRegion(data.destinationCountry, data.state);
-    const city = canonicalCity(data.destinationCountry, data.city);
+    const cityInput = normalizeText(data.city);
+    const stateInput = normalizeText(data.state);
+    const postalCode = String(data.postalCode || "").trim();
 
+    if (!cityInput || !stateInput) {
+        return {
+            error: "City and state/region are required."
+        };
+    }
+
+    const city = canonicalCity(country, data.city);
+    const region = canonicalRegion(country, data.state);
+
+    // Known city must belong to the selected region.
     if (city && region && city.state !== region) {
         return {
             error:
-                `"${city.name}" is listed in "${city.state}", not "${region}". ` +
-                "Please correct the city or state/region."
+                `City "${city.name}" belongs to "${city.state}", not "${region}". ` +
+                "Please correct the city or state."
         };
     }
 
+    // Known city, but the state is missing or invalid.
     if (city && !region) {
         return {
             error:
-                `The state/region "${data.state}" does not match the known ` +
-                `region "${city.state}" for ${city.name}.`
+                `State/region "${data.state}" does not match the known region ` +
+                `"${city.state}" for ${city.name}.`
         };
     }
 
-    if (!region && config.states.length > 0) {
+    // Known state, but the city is not in our reference list.
+    if (region && !city) {
         return {
             error: "",
             warning:
-                `"${data.state}" is not in this country's local region suggestions. ` +
-                "Confirm the spelling and country. Continue only if the address is correct."
+                `City "${data.city}" could not be verified in the built-in ` +
+                "city list. Confirm the city and address before continuing."
         };
     }
 
-    if (!city) {
+    // Neither city nor region could be verified.
+    if (!region && !city) {
         return {
             error: "",
             warning:
-                `"${data.city}" could not be verified in the built-in city list. ` +
-                "The list is not exhaustive. Confirm that the city and address are correct."
+                `City "${data.city}" and state/region "${data.state}" could not ` +
+                "be verified for the selected country. Please confirm before continuing."
         };
     }
 
-    return { error: "", warning: "" };
+    return {
+        error: "",
+        warning: ""
+    };
 }
 
 function normalizeAddressValues(data) {
@@ -638,36 +683,48 @@ function normalizeAddressValues(data) {
     return data;
 }
 
+
 function validatePostalCode(country, postalCode) {
     const postal = String(postalCode ?? "").trim();
+
     if (!postal) return "";
 
-    let valid = true;
+    const rules = {
+        IN: [
+            /^\d{6}$/,
+            "Indian postal codes should contain 6 digits."
+        ],
+        US: [
+            /^\d{5}(?:-\d{4})?$/,
+            "Enter a valid US ZIP code (5 digits or ZIP+4)."
+        ],
+        CA: [
+            /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/,
+            "Enter a valid Canadian postal code, e.g. M5V 2T6."
+        ],
+        GB: [
+            /^[A-Za-z0-9 ]{5,8}$/,
+            "Check the UK postal code format."
+        ],
+        ES: [
+            /^(?:0[1-9]|[1-4]\d|5[0-2])\d{3}$/,
+            "Spanish postal codes must contain 5 valid digits."
+        ]
+    };
 
-    if (country === "IN") {
-        valid = /^\d{6}$/.test(postal);
-    } else if (country === "US") {
-        valid = /^\d{5}(?:-\d{4})?$/.test(postal);
-    } else if (country === "CA") {
-        valid = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(postal);
-    } else if (country === "GB") {
-        valid = /^[A-Za-z0-9 ]{5,8}$/.test(postal);
-    } else {
-        valid = /^[A-Za-z0-9 -]{3,12}$/.test(postal);
+    const rule = rules[country];
+
+    if (rule && !rule[0].test(postal)) {
+        return rule[1];
     }
 
-    return valid
-        ? ""
-        : country === "IN"
-            ? "Indian postal codes should contain 6 digits."
-            : country === "US"
-                ? "Enter a valid US ZIP code (5 digits or ZIP+4)."
-                : country === "CA"
-                    ? "Enter a valid Canadian postal code, for example M5V 2T6."
-                    : country === "GB"
-                        ? "Check the postal code format."
-                        : "Postal code contains an invalid format.";
+    if (!rule && !/^[A-Za-z0-9 -]{3,12}$/.test(postal)) {
+        return "Postal code contains an invalid format.";
+    }
+
+    return "";
 }
+
 
 
 /* =========================================
