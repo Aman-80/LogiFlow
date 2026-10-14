@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deliveries | LogiFlow</title>
+    <link rel="stylesheet" href="css/deliveries.css">
+</head>
+<body>
+<div class="delivery-page">
+    <aside class="sidebar">
+        <a href="dashboard.html" class="brand">
+            <span class="brand-logo">L</span>
+            <span>LogiFlow</span>
+        </a>
+        <div class="sidebar-label">WORKSPACE</div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-link"><span class="nav-icon">▦</span><span>Dashboard</span></a>
+            <a href="inventory.html" class="nav-link"><span class="nav-icon">▤</span><span>Inventory</span></a>
+            <a href="orders.html" class="nav-link"><span class="nav-icon">☷</span><span>Orders</span></a>
+            <a href="shipments.html" class="nav-link"><span class="nav-icon">⇄</span><span>Shipments</span></a>
+            <a href="warehouses.html" class="nav-link"><span class="nav-icon">⌂</span><span>Warehouses</span></a>
+            <a href="deliveries.html" class="nav-link active"><span class="nav-icon">➜</span><span>Deliveries</span></a>
+        </nav>
+        <div class="sidebar-bottom">
+            <div class="sidebar-profile">
+                <div class="profile-avatar">LF</div>
+                <div class="profile-info">
+                    <strong>LogiFlow Admin</strong>
+                    <span>Workspace Manager</span>
+                </div>
+            </div>
+            <a href="index.html" class="logout-link"><span>↪</span><span>Logout</span></a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <div class="breadcrumb">Workspace / Deliveries</div>
+                <h1>Deliveries</h1>
+                <p class="page-subtitle">Assign deliveries, track progress and confirm successful drop-offs.</p>
+            </div>
+            <button type="button" class="primary-btn" id="open-delivery-modal">
+                <span>+</span> Create Delivery
+            </button>
+        </header>
+
+        <section class="stats-grid">
+            <article class="stat-card">
+                <div class="stat-top"><span>Total Deliveries</span><span class="stat-icon">▤</span></div>
+                <h2 id="total-deliveries">0</h2>
+                <p>All delivery records</p>
+            </article>
+            <article class="stat-card">
+                <div class="stat-top"><span>In Progress</span><span class="stat-icon">⇢</span></div>
+                <h2 id="in-progress-deliveries">0</h2>
+                <p>Currently being delivered</p>
+            </article>
+            <article class="stat-card">
+                <div class="stat-top"><span>Delivered</span><span class="stat-icon">✓</span></div>
+                <h2 id="completed-deliveries">0</h2>
+                <p>Successfully completed</p>
+            </article>
+            <article class="stat-card">
+                <div class="stat-top"><span>Delayed</span><span class="stat-icon">◷</span></div>
+                <h2 id="delayed-deliveries">0</h2>
+                <p>Requires attention</p>
+            </article>
+        </section>
+
+        <section class="panel delivery-overview">
+            <div class="section-heading">
+                <div>
+                    <h2>Delivery Operations</h2>
+                    <p>Overview of the current delivery workload.</p>
+                </div>
+                <span class="overview-label">Live from saved records</span>
+            </div>
+
+            <div class="overview-grid">
+                <div class="overview-item overview-filter" role="button" tabindex="0" data-delivery-group="pending" aria-pressed="false">
+                    <div class="overview-item-heading"><span>Pending Assignment</span><strong id="pending-count">0</strong></div>
+                    <div class="overview-progress"><div class="overview-progress-fill pending-fill" id="pending-progress"></div></div>
+                </div>
+
+                <div class="overview-item overview-filter" role="button" tabindex="0" data-delivery-group="transit" aria-pressed="false">
+                    <div class="overview-item-heading"><span>In Transit</span><strong id="transit-count">0</strong></div>
+                    <div class="overview-progress"><div class="overview-progress-fill transit-fill" id="transit-progress"></div></div>
+                </div>
+
+                <div class="overview-item overview-filter" role="button" tabindex="0" data-delivery-group="out" aria-pressed="false">
+                    <div class="overview-item-heading"><span>Out for Delivery</span><strong id="out-for-delivery-count">0</strong></div>
+                    <div class="overview-progress"><div class="overview-progress-fill out-fill" id="out-for-delivery-progress"></div></div>
+                </div>
+
+                <div class="overview-item overview-filter" role="button" tabindex="0" data-delivery-group="failed" aria-pressed="false">
+                    <div class="overview-item-heading"><span>Failed / Returned</span><strong id="failed-count">0</strong></div>
+                    <div class="overview-progress"><div class="overview-progress-fill failed-fill" id="failed-progress"></div></div>
+                </div>
+
+                <div class="overview-item overview-filter" role="button" tabindex="0" data-delivery-group="refund" aria-pressed="false">
+                    <div class="overview-item-heading"><span>Refunds Pending</span><strong id="refund-count">0</strong></div>
+                    <div class="overview-progress"><div class="overview-progress-fill refund-fill" id="refund-progress"></div></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel delivery-list-panel">
+            <div class="section-heading">
+                <div>
+                    <h2 id="delivery-list-title">Delivery Records</h2>
+                    <p>Search, assign and manage delivery operations.</p>
+                </div>
+                <span class="record-count" id="delivery-record-count">0 deliveries</span>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-box">
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" id="delivery-search" placeholder="Search tracking ID, order, recipient..." aria-label="Search delivery records">
+                </div>
+
+                <select id="delivery-status-filter" aria-label="Filter by delivery status">
+                    <option value="all">All statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="Picked Up">Picked Up</option>
+                    <option value="In Transit">In Transit</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Delayed">Delayed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Returned">Returned</option>
+                </select>
+
+                <select id="delivery-priority-filter" aria-label="Filter by delivery priority">
+                    <option value="all">All priorities</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Express">Express</option>
+                    <option value="Urgent">Urgent</option>
+                </select>
+            </div>
+
+            <div class="overview-filter-banner" id="overview-filter-banner" hidden>
+                <span id="overview-filter-label">Filtered deliveries</span>
+                <button type="button" id="clear-overview-filter" class="secondary-btn">Clear filter</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>TRACKING / ORDER</th>
+                            <th>RECIPIENT</th>
+                            <th>DESTINATION</th>
+                            <th>DRIVER / VEHICLE</th>
+                            <th>EXPECTED DELIVERY</th>
+                            <th>PRIORITY</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="delivery-table-body">
+                        <tr><td colspan="8" class="empty-state">Loading delivery records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer class="page-footer">
+            <span>LogiFlow Operations</span>
+            <span>Delivery Management</span>
+        </footer>
+    </main>
+</div>
+
+<!-- CREATE / EDIT DELIVERY -->
+<div class="modal-overlay" id="delivery-modal" role="dialog" aria-modal="true" aria-labelledby="delivery-modal-title" hidden>
+    <div class="modal-card">
+        <div class="modal-header">
+            <div>
+                <span class="modal-eyebrow">DELIVERY MANAGEMENT</span>
+                <h2 id="delivery-modal-title">Create Delivery</h2>
+                <p>Enter shipment, recipient and assignment details.</p>
+            </div>
+            <button type="button" class="close-modal" id="close-delivery-modal" aria-label="Close dialog">&times;</button>
+        </div>
+
+        <form id="delivery-form">
+            <input type="hidden" id="delivery-id">
+
+            <h3 class="form-section-title">Delivery Information</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="tracking-id">Tracking ID *</label>
+                    <input type="text" id="tracking-id" maxlength="40" placeholder="e.g. LF-DLV-1001" required>
+                </div>
+                <div class="form-group">
+                    <label for="order-reference">Order Reference *</label>
+                    <input type="text" id="order-reference" maxlength="60" placeholder="e.g. ORD-1001" required>
+                </div>
+                <div class="form-group">
+                    <label for="delivery-priority">Priority *</label>
+                    <select id="delivery-priority" required>
+                        <option value="Standard">Standard</option>
+                        <option value="Express">Express</option>
+                        <option value="Urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="delivery-status">Initial Status *</label>
+                    <select id="delivery-status" required>
+                        <option value="Pending">Pending</option>
+                        <option value="Assigned">Assigned</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="transport-mode">Transport Mode *</label>
+                    <select id="transport-mode" required>
+                        <option value="Road">Road</option>
+                        <option value="Air">Air</option>
+                        <option value="Rail">Rail</option>
+                        <option value="Sea">Sea</option>
+                        <option value="Local Courier">Local Courier</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="source-warehouse">Origin Warehouse</label>
+                    <input type="text" id="source-warehouse" maxlength="100" placeholder="e.g. WH-GGN-01">
+                </div>
+            </div>
+
+            <h3 class="form-section-title">Recipient &amp; Destination</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="recipient-name">Recipient Name *</label>
+                    <input type="text" id="recipient-name" maxlength="100" placeholder="Full name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="recipient-phone">Recipient Phone</label>
+                    <div class="phone-input-group">
+                        <select id="recipient-phone-country" aria-label="Recipient phone country code">
+                            <option value="IN">India (+91)</option>
+                            <option value="US">United States (+1)</option>
+                            <option value="CA">Canada (+1)</option>
+                            <option value="GB">United Kingdom (+44)</option>
+                            <option value="AE">UAE (+971)</option>
+                            <option value="SG">Singapore (+65)</option>
+                            <option value="AU">Australia (+61)</option>
+                            <option value="DE">Germany (+49)</option>
+                            <option value="FR">France (+33)</option>
+                            <option value="JP">Japan (+81)</option>
+                            <option value="CN">China (+86)</option>
+                            <option value="SA">Saudi Arabia (+966)</option>
+                            <option value="PK">Pakistan (+92)</option>
+                            <option value="BD">Bangladesh (+880)</option>
+                            <option value="NZ">New Zealand (+64)</option>
+                            <option value="NL">Netherlands (+31)</option>
+                            <option value="IT">Italy (+39)</option>
+                            <option value="ES">Spain (+34)</option>
+                            <option value="ZA">South Africa (+27)</option>
+                            <option value="BR">Brazil (+55)</option>
+                            <option value="MX">Mexico (+52)</option>
+                            <option value="MY">Malaysia (+60)</option>
+                            <option value="ID">Indonesia (+62)</option>
+                            <option value="KR">South Korea (+82)</option>
+                            <option value="TR">Türkiye (+90)</option>
+                            <option value="TH">Thailand (+66)</option>
+                            <option value="QA">Qatar (+974)</option>
+                        </select>
+                        <input type="tel" id="recipient-phone" maxlength="25" inputmode="tel" placeholder="National number (without code)" aria-describedby="recipient-phone-help">
+                    </div>
+                    <small id="recipient-phone-help">Choose the recipient's phone country code. Enter digits without the country code.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="delivery-country">Destination Country *</label>
+                    <select id="delivery-country" required>
+                        <option value="IN">India</option>
+                        <option value="US">United States</option>
+                        <option value="CA">Canada</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="AE">United Arab Emirates</option>
+                        <option value="SG">Singapore</option>
+                        <option value="AU">Australia</option>
+                        <option value="DE">Germany</option>
+                        <option value="FR">France</option>
+                        <option value="JP">Japan</option>
+                        <option value="CN">China</option>
+                        <option value="SA">Saudi Arabia</option>
+                        <option value="PK">Pakistan</option>
+                        <option value="BD">Bangladesh</option>
+                        <option value="NZ">New Zealand</option>
+                        <option value="NL">Netherlands</option>
+                        <option value="IT">Italy</option>
+                        <option value="ES">Spain</option>
+                        <option value="ZA">South Africa</option>
+                        <option value="BR">Brazil</option>
+                        <option value="MX">Mexico</option>
+                        <option value="MY">Malaysia</option>
+                        <option value="ID">Indonesia</option>
+                        <option value="KR">South Korea</option>
+                        <option value="TR">Türkiye</option>
+                        <option value="TH">Thailand</option>
+                        <option value="QA">Qatar</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="delivery-city">Destination City *</label>
+                    <input type="text" id="delivery-city" list="delivery-city-options" maxlength="80" placeholder="Enter or choose a city" required autocomplete="off">
+                    <datalist id="delivery-city-options"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="delivery-state">State / Province / Region *</label>
+                    <input type="text" id="delivery-state" list="delivery-state-options" maxlength="80" placeholder="Enter or choose a state / region" required autocomplete="off">
+                    <datalist id="delivery-state-options"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="delivery-postal-code">Postal / ZIP Code</label>
+                    <input type="text" id="delivery-postal-code" maxlength="20" placeholder="Postal or ZIP code" autocomplete="postal-code">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="delivery-address">Delivery Address *</label>
+                    <textarea id="delivery-address" maxlength="400" rows="2" placeholder="House/building, street, area and postal code" required></textarea>
+                </div>
+            </div>
+
+            <h3 class="form-section-title">Driver &amp; Vehicle Assignment</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="driver-name">Driver Name</label>
+                    <input type="text" id="driver-name" maxlength="100" placeholder="Assigned driver">
+                </div>
+
+                <div class="form-group">
+                    <label for="driver-phone">Driver Contact</label>
+                    <div class="phone-input-group">
+                        <select id="driver-phone-country" aria-label="Driver phone country code">
+                            <option value="IN">India (+91)</option>
+                            <option value="US">United States (+1)</option>
+                            <option value="CA">Canada (+1)</option>
+                            <option value="GB">United Kingdom (+44)</option>
+                            <option value="AE">UAE (+971)</option>
+                            <option value="SG">Singapore (+65)</option>
+                            <option value="AU">Australia (+61)</option>
+                            <option value="DE">Germany (+49)</option>
+                            <option value="FR">France (+33)</option>
+                            <option value="JP">Japan (+81)</option>
+                            <option value="CN">China (+86)</option>
+                            <option value="SA">Saudi Arabia (+966)</option>
+                            <option value="PK">Pakistan (+92)</option>
+                            <option value="BD">Bangladesh (+880)</option>
+                            <option value="NZ">New Zealand (+64)</option>
+                            <option value="NL">Netherlands (+31)</option>
+                            <option value="IT">Italy (+39)</option>
+                            <option value="ES">Spain (+34)</option>
+                            <option value="ZA">South Africa (+27)</option>
+                            <option value="BR">Brazil (+55)</option>
+                            <option value="MX">Mexico (+52)</option>
+                            <option value="MY">Malaysia (+60)</option>
+                            <option value="ID">Indonesia (+62)</option>
+                            <option value="KR">South Korea (+82)</option>
+                            <option value="TR">Türkiye (+90)</option>
+                            <option value="TH">Thailand (+66)</option>
+                            <option value="QA">Qatar (+974)</option>
+                        </select>
+                        <input type="tel" id="driver-phone" maxlength="25" inputmode="tel" placeholder="National number (without code)" aria-describedby="driver-phone-help">
+                    </div>
+                    <small id="driver-phone-help">Choose the driver's phone country code. Enter digits without the country code.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicle-number">Vehicle Registration</label>
+                    <input type="text" id="vehicle-number" maxlength="30" placeholder="e.g. HR26AB1234">
+                </div>
+
+                <div class="form-group">
+                    <label for="carrier-name">Carrier / Transporter</label>
+                    <input type="text" id="carrier-name" maxlength="100" placeholder="Company or delivery partner">
+                </div>
+            </div>
+
+            <h3 class="form-section-title">Order / Payment Follow-up</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="refund-status">Refund Status</label>
+                    <select id="refund-status">
+                        <option value="None">No Refund</option>
+                        <option value="Requested">Refund Requested</option>
+                        <option value="Processing">Refund Processing</option>
+                        <option value="Refunded">Refunded</option>
+                    </select>
+                    <small>Demo field for this delivery's order reference. Later it should move to the shared Orders / Payments module.</small>
+                </div>
+            </div>
+
+            <h3 class="form-section-title">Schedule &amp; Notes</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="estimated-delivery">Estimated Delivery *</label>
+                    <input type="datetime-local" id="estimated-delivery" required>
+                </div>
+                <div class="form-group">
+                    <label for="delivery-created-at">Record Created</label>
+                    <input type="text" id="delivery-created-at" value="Set automatically" readonly>
+                </div>
+                <div class="form-group full-width">
+                    <label for="delivery-notes">Delivery Instructions / Notes</label>
+                    <textarea id="delivery-notes" maxlength="1000" rows="3" placeholder="Special handling, gate instructions or other notes..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-notice">
+                Status changes, delivery events and proof of delivery will be recorded separately.
+                Changing the estimated time does not automatically mark a delivery as delayed.
+            </div>
+            <div class="form-error" id="delivery-form-error" role="alert" hidden></div>
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" id="cancel-delivery">Cancel</button>
+                <button type="submit" class="primary-btn" id="save-delivery">Save Delivery</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- DELIVERY DETAILS AND TIMELINE -->
+<div class="modal-overlay" id="delivery-details-modal" role="dialog" aria-modal="true" aria-labelledby="delivery-details-title" hidden>
+    <div class="modal-card details-card">
+        <div class="modal-header">
+            <div>
+                <span class="modal-eyebrow">DELIVERY TRACKING</span>
+                <h2 id="delivery-details-title">Delivery Details</h2>
+                <p id="delivery-details-tracking"></p>
+            </div>
+            <button type="button" class="close-modal" id="close-delivery-details" aria-label="Close dialog">&times;</button>
+        </div>
+        <div id="delivery-details-content" class="details-content"></div>
+        <section class="timeline-section">
+            <div class="section-heading">
+                <div>
+                    <h3>Delivery Timeline</h3>
+                    <p>Status history and recorded events.</p>
+                </div>
+            </div>
+            <div id="delivery-timeline" class="delivery-timeline">
+                <p class="empty-state">No timeline events available.</p>
+            </div>
+        </section>
+        <section class="pod-summary-section" id="pod-summary-section" hidden>
+            <div class="section-heading">
+                <div>
+                    <h3>Proof of Delivery</h3>
+                    <p>Recorded delivery confirmation.</p>
+                </div>
+            </div>
+            <div id="pod-summary-content"></div>
+        </section>
+        <div class="modal-actions details-actions">
+            <button type="button" class="secondary-btn" id="close-details-button">Close</button>
+            <button type="button" class="secondary-btn" id="update-delivery-status">Update Status</button>
+            <button type="button" class="primary-btn" id="edit-from-details">Edit Delivery</button>
+        </div>
+    </div>
+</div>
+
+<!-- UPDATE DELIVERY STATUS -->
+<div class="modal-overlay" id="delivery-status-modal" role="dialog" aria-modal="true" aria-labelledby="delivery-status-title" hidden>
+    <div class="modal-card compact-modal">
+        <div class="modal-header">
+            <div>
+                <span class="modal-eyebrow">TRACKING UPDATE</span>
+                <h2 id="delivery-status-title">Update Delivery Status</h2>
+                <p>Record the next delivery event.</p>
+            </div>
+            <button type="button" class="close-modal" id="close-status-modal" aria-label="Close dialog">&times;</button>
+        </div>
+        <form id="delivery-status-form">
+            <div class="form-group">
+                <label for="new-delivery-status">New Status *</label>
+                <select id="new-delivery-status" required>
+                    <option value="Pending">Pending</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="Picked Up">Picked Up</option>
+                    <option value="In Transit">In Transit</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Delayed">Delayed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Returned">Returned</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="status-event-time">Event Date &amp; Time *</label>
+                <input type="datetime-local" id="status-event-time" required>
+            </div>
+            <div class="form-group">
+                <label for="status-event-location">Event Location</label>
+                <input type="text" id="status-event-location" maxlength="200" placeholder="City, hub or delivery point">
+            </div>
+            <div class="form-group">
+                <label for="status-event-reason">Reason / Event Note *</label>
+                <textarea id="status-event-reason" maxlength="800" rows="3" placeholder="Explain the status update..." required></textarea>
+            </div>
+            <div class="form-notice">The event time is the time you are recording for this event. Use the correct time and reason so the timeline remains useful.</div>
+            <div class="form-error" id="delivery-status-error" role="alert" hidden></div>
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" id="cancel-status-update">Cancel</button>
+                <button type="submit" class="primary-btn">Save Status Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- PROOF OF DELIVERY -->
+<div class="modal-overlay" id="proof-of-delivery-modal" role="dialog" aria-modal="true" aria-labelledby="pod-title" hidden>
+    <div class="modal-card compact-modal">
+        <div class="modal-header">
+            <div>
+                <span class="modal-eyebrow">DELIVERY CONFIRMATION</span>
+                <h2 id="pod-title">Proof of Delivery</h2>
+                <p>Record who received the package and how it was confirmed.</p>
+            </div>
+            <button type="button" class="close-modal" id="close-pod-modal" aria-label="Close dialog">&times;</button>
+        </div>
+        <form id="proof-of-delivery-form">
+            <div class="form-group">
+                <label for="pod-received-by">Received / Confirmed By *</label>
+                <input type="text" id="pod-received-by" maxlength="100" placeholder="Recipient or authorized receiver" required>
+            </div>
+            <div class="form-group">
+                <label for="pod-method">Confirmation Method *</label>
+                <select id="pod-method" required>
+                    <option value="Receiver Name">Receiver Name</option>
+                    <option value="Signature Reference">Signature Reference</option>
+                    <option value="Photo Reference">Photo Reference</option>
+                    <option value="OTP Verified">OTP Verified</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pod-reference">Proof Reference</label>
+                <input type="text" id="pod-reference" maxlength="200" placeholder="Reference ID or secure file reference">
+                <small>This demo records a reference only; it does not upload or securely store proof images or documents.</small>
+            </div>
+            <div class="form-group">
+                <label for="pod-delivered-at">Actual Delivery Date &amp; Time *</label>
+                <input type="datetime-local" id="pod-delivered-at" required>
+            </div>
+            <div class="form-group">
+                <label for="pod-notes">Confirmation Notes</label>
+                <textarea id="pod-notes" maxlength="800" rows="3" placeholder="Optional confirmation details..."></textarea>
+            </div>
+            <div class="form-notice">Mark a delivery as completed only when the handover is confirmed. Proof information should be recorded accurately.</div>
+            <div class="form-error" id="pod-form-error" role="alert" hidden></div>
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" id="cancel-pod">Cancel</button>
+                <button type="submit" class="primary-btn" id="save-pod">Confirm Delivery</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="js/deliveries.js"></script>
+</body>
+</html>
