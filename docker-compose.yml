@@ -1,0 +1,35 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: logiflow-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://logiflow_user:logiflow_pass@db:5432/logiflow_db
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    container_name: logiflow-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: logiflow_user
+      POSTGRES_PASSWORD: logiflow_pass
+      POSTGRES_DB: logiflow_db
+    volumes:
+      - logiflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logiflow_user -d logiflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  logiflow_postgres_data:
