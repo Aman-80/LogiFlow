@@ -36,6 +36,18 @@ class Product(Base):
         nullable=False
     )
 
+    category: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="Uncategorized"
+    )
+
+    warehouse: Mapped[str] = mapped_column(
+        String(150),
+        nullable=False,
+        default="Unassigned"
+    )
+
     quantity: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

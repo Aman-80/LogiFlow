@@ -2,6 +2,7 @@ import os
 from decimal import Decimal
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -30,10 +31,23 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type"],
+)
+
 
 class ProductCreate(BaseModel):
     sku: str = Field(min_length=1, max_length=50)
     name: str = Field(min_length=1, max_length=200)
+    category: str = Field(min_length=1, max_length=100)
+    warehouse: str = Field(min_length=1, max_length=150)
     quantity: int = Field(default=0, ge=0)
     unit_price: Decimal = Field(
         default=Decimal("0.00"),
@@ -41,6 +55,7 @@ class ProductCreate(BaseModel):
         max_digits=10,
         decimal_places=2
     )
+
 class ProductUpdate(BaseModel):
     sku: str | None = Field(
         default=None, min_length=1, max_length=50
@@ -48,6 +63,8 @@ class ProductUpdate(BaseModel):
     name: str | None = Field(
         default=None, min_length=1, max_length=200
     )
+    category: str | None = Field(default=None, min_length=1, max_length=100)
+    warehouse: str | None = Field(default=None, min_length=1, max_length=150)
     quantity: int | None = Field(
         default=None, ge=0
     )
@@ -61,6 +78,8 @@ class ProductResponse(BaseModel):
     id: int
     sku: str
     name: str
+    category: str
+    warehouse: str
     quantity: int
     unit_price: Decimal
 

@@ -6,7 +6,93 @@
 ========================================= */
 
 const STORAGE_KEY = "logiflow.inventory.v1";
+const API_BASE_URL = "http://localhost:8000";
 
+async function fetchProductsFromApi() {
+    const response = await fetch(`${API_BASE_URL}/products`);
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to fetch products: HTTP ${response.status}`
+        );
+    }
+
+    const apiProducts = await response.json();
+
+    return apiProducts.map(product => ({
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        sku: product.sku,
+        stock: product.quantity,
+        warehouse: product.warehouse,
+        unitPrice: Number(product.unit_price)
+    }));
+}
+
+async function createProductInApi(product) {
+    const response = await fetch(`${API_BASE_URL}/products`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            sku: product.sku,
+            name: product.name,
+            category: product.category,
+            warehouse: product.warehouse,
+            quantity: product.stock,
+            unit_price: product.unitPrice
+        })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+        const message =
+            typeof result.detail === "string"
+                ? result.detail
+                : `API request failed: HTTP ${response.status}`;
+
+        throw new Error(message);
+    }
+
+    return result;
+}
+
+
+async function updateProductInApi(productId, product) {
+    const response = await fetch(
+        `${API_BASE_URL}/products/${productId}`,
+        {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                sku: product.sku,
+                name: product.name,
+                category: product.category,
+                warehouse: product.warehouse,
+                quantity: product.stock,
+                unit_price: product.unitPrice
+            })
+        }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+        const message =
+            typeof result.detail === "string"
+                ? result.detail
+                : `API request failed: HTTP ${response.status}`;
+
+        throw new Error(message);
+    }
+
+    return result;
+}
 
 /* =========================================
    ELEMENTS
@@ -23,6 +109,7 @@ const productNameInput = document.querySelector("#product-name");
 const productCategoryInput = document.querySelector("#product-category");
 const productSkuInput = document.querySelector("#product-sku");
 const productStockInput = document.querySelector("#product-stock");
+const productPriceInput = document.querySelector("#product-price");
 const productWarehouseInput = document.querySelector("#product-warehouse");
 
 const productModalTitle = document.querySelector("#product-modal-title");
@@ -401,6 +488,15 @@ function renderProducts() {
         /* SKU, STOCK, WAREHOUSE */
         row.appendChild(createCell(product.sku));
         row.appendChild(createCell(product.stock));
+        row.appendChild(
+            createCell(
+                Number(product.unitPrice ?? 0).toLocaleString("en-IN", {
+                    style: "currency",
+                    currency: "INR",
+                    minimumFractionDigits: 2
+                })
+            )
+        );
         row.appendChild(createCell(product.warehouse));
 
         /* STATUS */
@@ -547,6 +643,7 @@ function openEditProductModal(sku) {
     productCategoryInput.value = product.category;
     productSkuInput.value = product.sku;
     productWarehouseInput.value = product.warehouse;
+    productPriceInput.value = product.unitPrice ?? 0;
     productStockInput.value = product.stock;
 
     /*
@@ -576,7 +673,7 @@ function closeProductModal() {
 }
 
 
-function saveProduct(event) {
+async function saveProduct(event) {
     event.preventDefault();
 
     const name = productNameInput.value.trim();
@@ -585,6 +682,20 @@ function saveProduct(event) {
     const warehouse = productWarehouseInput.value;
     const stockText = productStockInput.value;
     const stock = Number(stockText);
+
+
+        const priceText = productPriceInput.value;
+    const unitPrice = Number(priceText);
+
+    if (
+        priceText.trim() === "" ||
+        !Number.isFinite(unitPrice) ||
+        unitPrice < 0
+    ) {
+        alert("Please enter a valid unit price of zero or greater.");
+        productPriceInput.focus();
+        return;
+    }
 
     if (!name || !category || !sku || !warehouse) {
         alert("Please complete all required fields.");
@@ -604,17 +715,20 @@ function saveProduct(event) {
 
         const previousProduct = products[index];
 
-        const updatedProduct = {
+                const updatedProduct = {
             ...previousProduct,
             name,
             category,
-            warehouse
+            warehouse,
+            unitPrice
         };
 
         const hasChanges =
             updatedProduct.name !== previousProduct.name ||
             updatedProduct.category !== previousProduct.category ||
-            updatedProduct.warehouse !== previousProduct.warehouse;
+            updatedProduct.warehouse !== previousProduct.warehouse ||
+            Number(updatedProduct.unitPrice) !==
+                Number(previousProduct.unitPrice ?? 0);
 
         if (!hasChanges) {
             alert("No changes detected. Nothing was saved.");
@@ -633,17 +747,32 @@ function saveProduct(event) {
             return;
         }
 
-        products[index] = updatedProduct;
+        try {
+            const savedProduct = await updateProductInApi(
+                previousProduct.id,
+                updatedProduct
+            );
 
-        if (!persistInventoryState()) {
-            products[index] = previousProduct;
-            return;
+            products[index] = {
+                id: savedProduct.id,
+                sku: savedProduct.sku,
+                name: savedProduct.name,
+                category: savedProduct.category,
+                warehouse: savedProduct.warehouse,
+                stock: savedProduct.quantity,
+                unitPrice: Number(savedProduct.unit_price)
+            };
+
+            closeProductModal();
+            renderProducts();
+
+            alert("Product details updated successfully in the database.");
+
+        } catch (error) {
+            console.error("Unable to update product:", error);
+            alert(`Product details could not be saved: ${error.message}`);
         }
 
-        closeProductModal();
-        renderProducts();
-
-        alert("Product details updated successfully.");
         return;
     }
 
@@ -668,29 +797,40 @@ function saveProduct(event) {
         return;
     }
 
-    const newProduct = {
-        name,
-        category,
-        sku,
-        stock,
-        warehouse
-    };
+        const newProduct = {
+            name,
+            category,
+            sku,
+            stock,
+            warehouse,
+            unitPrice
+        };
+    try {
+        const savedProduct = await createProductInApi(newProduct);
 
-    products.unshift(newProduct);
+        products.unshift({
+            id: savedProduct.id,
+            name: savedProduct.name,
+            category: savedProduct.category,
+            sku: savedProduct.sku,
+            stock: savedProduct.quantity,
+            warehouse: savedProduct.warehouse,
+            unitPrice: Number(savedProduct.unit_price)
+        });
 
-    if (!persistInventoryState()) {
-        products.shift();
-        return;
+        searchInput.value = "";
+        warehouseFilter.value = "All Warehouses";
+        statusFilter.value = "All Status";
+
+        closeProductModal();
+        renderProducts();
+
+        alert("Product added successfully and saved to the database.");
+
+    } catch (error) {
+        console.error("Unable to create product:", error);
+        alert(`Product could not be saved: ${error.message}`);
     }
-
-    searchInput.value = "";
-    warehouseFilter.value = "All Warehouses";
-    statusFilter.value = "All Status";
-
-    closeProductModal();
-    renderProducts();
-
-    alert("Product added successfully.");
 }
 
 
@@ -773,8 +913,7 @@ function updateAdjustmentQuantityLabel() {
     adjustmentQuantity.value = "";
 }
 
-
-function saveStockAdjustment(event) {
+async function saveStockAdjustment(event) {
     event.preventDefault();
 
     const productIndex = products.findIndex(
@@ -861,8 +1000,7 @@ function saveStockAdjustment(event) {
         return;
     }
 
-    const previousStock = product.stock;
-    const previousHistory = stockHistory;
+        const previousStock = product.stock;
 
     const historyRecord = {
         id: `STK-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -877,27 +1015,52 @@ function saveStockAdjustment(event) {
         timestamp: new Date().toISOString()
     };
 
-    products[productIndex] = {
-        ...product,
-        stock: newStock
-    };
+    try {
+        const savedProduct = await updateProductInApi(
+            product.id,
+            {
+                ...product,
+                stock: newStock
+            }
+        );
 
-    stockHistory = [...stockHistory, historyRecord];
+        products[productIndex] = {
+            id: savedProduct.id,
+            sku: savedProduct.sku,
+            name: savedProduct.name,
+            category: savedProduct.category,
+            warehouse: savedProduct.warehouse,
+            stock: savedProduct.quantity,
+            unitPrice: Number(savedProduct.unit_price)
+        };
 
-    if (!persistInventoryState()) {
-        products[productIndex] = product;
-        stockHistory = previousHistory;
-        return;
+        stockHistory = [...stockHistory, historyRecord];
+
+        const historySaved = persistInventoryState();
+
+        closeStockAdjustmentModal();
+        renderProducts();
+
+        if (historySaved) {
+            alert(
+                "Stock adjusted successfully.\n\n" +
+                `Previous stock: ${previousStock}\n` +
+                `New stock: ${savedProduct.quantity}`
+            );
+        } else {
+            alert(
+                "Stock was updated in PostgreSQL, but stock history " +
+                "could not be saved in browser storage."
+            );
+        }
+
+    } catch (error) {
+        console.error("Unable to adjust stock:", error);
+
+        alert(
+            `Stock adjustment could not be saved: ${error.message}`
+        );
     }
-
-    closeStockAdjustmentModal();
-    renderProducts();
-
-    alert(
-        "Stock adjusted successfully.\n\n" +
-        `Previous stock: ${previousStock}\n` +
-        `New stock: ${newStock}`
-    );
 }
 
 
@@ -932,8 +1095,7 @@ function closeSkuChangeModal() {
     changingSku = null;
 }
 
-
-function saveSkuChange(event) {
+async function saveSkuChange(event) {
     event.preventDefault();
 
     const productIndex = products.findIndex(
@@ -978,62 +1140,75 @@ function saveSkuChange(event) {
         `New SKU: ${newSku}\n` +
         `Reason: ${reason}\n\n` +
         "The product's stock will not change.\n" +
-        "This correction updates the local inventory record only."
+        "This correction will be saved to the database. Stock quantity will not change."
     );
 
     if (!accepted) {
         return;
     }
 
-    const previousProduct = products[productIndex];
+        const previousProduct = products[productIndex];
 
-    products[productIndex] = {
-        ...product,
-        sku: newSku
+    const historyRecord = {
+        id: `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        sku: newSku,
+        previousSku: product.sku,
+        productName: product.name,
+        previousStock: product.stock,
+        change: 0,
+        newStock: product.stock,
+        type: "sku-correction",
+        reason,
+        notes: [
+            `Previous SKU: ${product.sku}`,
+            `New SKU: ${newSku}`,
+            notes
+        ].filter(Boolean).join(" | "),
+        timestamp: new Date().toISOString()
     };
 
-    /*
-       Record SKU corrections in the same stock-history collection
-       so the correction remains visible in the local audit trail.
-    */
-    const previousHistory = stockHistory;
+    try {
+        const savedProduct = await updateProductInApi(
+            previousProduct.id,
+            {
+                ...previousProduct,
+                sku: newSku
+            }
+        );
 
-    stockHistory = [
-        ...stockHistory,
-        {
-            id: `SKU-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            sku: newSku,
-            previousSku: product.sku,
-            productName: product.name,
-            previousStock: product.stock,
-            change: 0,
-            newStock: product.stock,
-            type: "sku-correction",
-            reason,
-            notes: [
-                `Previous SKU: ${product.sku}`,
-                `New SKU: ${newSku}`,
-                notes
-            ].filter(Boolean).join(" | "),
-            timestamp: new Date().toISOString()
+        products[productIndex] = {
+            id: savedProduct.id,
+            sku: savedProduct.sku,
+            name: savedProduct.name,
+            category: savedProduct.category,
+            warehouse: savedProduct.warehouse,
+            stock: savedProduct.quantity,
+            unitPrice: Number(savedProduct.unit_price)
+        };
+
+        stockHistory = [...stockHistory, historyRecord];
+        const historySaved = persistInventoryState();
+
+        closeSkuChangeModal();
+        renderProducts();
+
+        if (historySaved) {
+            alert(
+                "SKU corrected successfully in the database.\n\n" +
+                `Previous SKU: ${product.sku}\n` +
+                `New SKU: ${savedProduct.sku}`
+            );
+        } else {
+            alert(
+                "SKU was updated in PostgreSQL, but the local " +
+                "stock history could not be saved."
+            );
         }
-    ];
 
-    if (!persistInventoryState()) {
-        products[productIndex] = previousProduct;
-        stockHistory = previousHistory;
-        return;
+    } catch (error) {
+        console.error("Unable to update SKU:", error);
+        alert(`SKU correction failed: ${error.message}`);
     }
-
-    closeSkuChangeModal();
-    renderProducts();
-
-    alert(
-        "SKU corrected successfully.\n\n" +
-        `Previous SKU: ${product.sku}\n` +
-        `New SKU: ${newSku}\n\n` +
-        "Check any related orders or shipments before relying on this change."
-    );
 }
 
 
@@ -1266,4 +1441,24 @@ document.addEventListener("keydown", event => {
    INITIALIZE
 ========================================= */
 
-renderProducts();
+async function initializeInventory() {
+    try {
+        products = await fetchProductsFromApi();
+
+        console.info(
+            `Loaded ${products.length} products from LogiFlow API.`
+        );
+    } catch (error) {
+        console.error("Unable to load products from API:", error);
+
+        alert(
+            "Could not load inventory from the LogiFlow API. " +
+            "Showing saved browser inventory for now. " +
+            "Please check that the API is running."
+        );
+    }
+
+    renderProducts();
+}
+
+initializeInventory();
