@@ -4,7 +4,7 @@
    Maximum two successful edits per shipment
 ========================================= */
 
-const STORAGE_KEY = "logiflow.shipments.v1";
+const API_BASE_URL = "http://localhost:8000";
 const MAX_EDITS = 2;
 
 
@@ -162,9 +162,54 @@ function loadShipments() {
 }
 
 
-let shipments = loadShipments();
+let shipments = [];
 
 let editingShipmentId = null;
+
+async function loadShipmentsFromApi() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/shipments`);
+
+        if (!response.ok) {
+            throw new Error(
+                `Shipments API returned HTTP ${response.status}`
+            );
+        }
+
+        const apiShipments = await response.json();
+
+        if (!Array.isArray(apiShipments)) {
+            throw new Error("Invalid shipments API response.");
+        }
+
+        shipments = apiShipments.map(shipment => ({
+            id: shipment.id,
+            orderId: shipment.order_id,
+            carrier: shipment.carrier,
+            trackingNumber: shipment.tracking_number,
+            origin: shipment.origin,
+            destination: shipment.destination,
+            dispatchDate: shipment.dispatch_date,
+            estimatedDelivery: shipment.estimated_delivery,
+            status: shipment.status,
+            editCount: Math.max(
+                0,
+                Math.min(MAX_EDITS, Number(shipment.edit_count) || 0)
+            )
+        }));
+
+    } catch (error) {
+        console.error("Could not load shipments from API:", error);
+        shipments = [];
+
+        alert(
+            "Unable to load shipments from the backend. " +
+            "Check that Docker and the LogiFlow API are running, then refresh."
+        );
+    }
+
+    renderShipments();
+}
 
 
 /*
@@ -584,7 +629,7 @@ function readShipmentForm() {
    CREATE OR EDIT SHIPMENT
 ========================================= */
 
-function saveShipment(event) {
+async function saveShipment(event) {
     event.preventDefault();
 
     const formData = readShipmentForm();
@@ -596,18 +641,58 @@ function saveShipment(event) {
     /* CREATE MODE */
 
     if (editingShipmentId === null) {
-        const newShipment = {
-            id: `LF-SHP-${getNextShipmentNumber()}`,
-            ...formData,
-            editCount: 0
+    const newShipment = {
+        id: `LF-SHP-${getNextShipmentNumber()}`,
+        ...formData,
+        editCount: 0
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/shipments`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                id: newShipment.id,
+                order_id: newShipment.orderId,
+                carrier: newShipment.carrier,
+                tracking_number: newShipment.trackingNumber,
+                origin: newShipment.origin,
+                destination: newShipment.destination,
+                dispatch_date: newShipment.dispatchDate,
+                estimated_delivery: newShipment.estimatedDelivery,
+                status: newShipment.status
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
+
+            throw new Error(message);
+        }
+
+        const savedShipment = {
+            id: result.id,
+            orderId: result.order_id,
+            carrier: result.carrier,
+            trackingNumber: result.tracking_number,
+            origin: result.origin,
+            destination: result.destination,
+            dispatchDate: result.dispatch_date,
+            estimatedDelivery: result.estimated_delivery,
+            status: result.status,
+            editCount: Number(result.edit_count) || 0
         };
 
-        shipments.unshift(newShipment);
-
-        if (!persistShipments()) {
-            shipments.shift();
-            return;
-        }
+        shipments.unshift(savedShipment);
 
         searchInput.value = "";
         statusFilter.value = "All Status";
@@ -616,8 +701,17 @@ function saveShipment(event) {
         renderShipments();
 
         alert("Shipment created successfully.");
-        return;
+
+    } catch (error) {
+        console.error("Could not save shipment:", error);
+
+        alert(
+            `Shipment database save failed: ${error.message}`
+        );
     }
+
+    return;
+}
 
 
     /* EDIT MODE */
@@ -689,39 +783,79 @@ function saveShipment(event) {
         }
     }
 
-    const updatedShipment = {
-        ...existingShipment,
-        ...formData,
-        ...fixedFields,
-        editCount: existingShipment.editCount + 1
-    };
-
-    shipments[shipmentIndex] = updatedShipment;
-
-    if (!persistShipments()) {
-        shipments[shipmentIndex] = existingShipment;
-        return;
-    }
-
-    const wasFinalEdit = updatedShipment.editCount === MAX_EDITS;
-
-    searchInput.value = "";
-    statusFilter.value = "All Status";
-
-    closeShipmentModal();
-    renderShipments();
-
-    if (wasFinalEdit) {
-        alert(
-            "Final edit saved successfully.\n\n" +
-            "This shipment is now permanently locked for editing."
+        try {
+        const response = await fetch(
+            `${API_BASE_URL}/shipments/${encodeURIComponent(existingShipment.id)}`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    carrier: formData.carrier,
+                    tracking_number: formData.trackingNumber,
+                    origin: formData.origin,
+                    destination: formData.destination,
+                    dispatch_date: formData.dispatchDate,
+                    estimated_delivery: formData.estimatedDelivery,
+                    status: formData.status
+                })
+            }
         );
-    } else {
-        alert(
-            "Shipment updated successfully.\n\n" +
-            "You have used 1 of 2 permitted edits. " +
-            "One final edit remains."
-        );
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
+
+            throw new Error(message);
+        }
+
+        const updatedShipment = {
+            id: result.id,
+            orderId: result.order_id,
+            carrier: result.carrier,
+            trackingNumber: result.tracking_number,
+            origin: result.origin,
+            destination: result.destination,
+            dispatchDate: result.dispatch_date,
+            estimatedDelivery: result.estimated_delivery,
+            status: result.status,
+            editCount: Number(result.edit_count) || 0
+        };
+
+        shipments[shipmentIndex] = updatedShipment;
+
+        const wasFinalEdit = updatedShipment.editCount >= MAX_EDITS;
+
+        searchInput.value = "";
+        statusFilter.value = "All Status";
+
+        closeShipmentModal();
+        renderShipments();
+
+        if (wasFinalEdit) {
+            alert(
+                "Final edit saved successfully.\n\n" +
+                "This shipment is now permanently locked for editing."
+            );
+        } else {
+            alert(
+                `Shipment updated successfully.\n\n` +
+                `You have used ${updatedShipment.editCount} of ${MAX_EDITS} permitted edits. ` +
+                `${MAX_EDITS - updatedShipment.editCount} final edit remains.`
+            );
+        }
+
+    } catch (error) {
+        console.error("Could not update shipment:", error);
+
+        alert(`Shipment update failed: ${error.message}`);
     }
 }
 
@@ -848,5 +982,48 @@ dispatchDateInput.addEventListener("change", () => {
 /* =========================================
    INITIALIZE
 ========================================= */
+// Make shipment statistic cards filter the shipment table.
+document
+    .querySelectorAll(".shipment-stats .stat-card[data-status-filter]")
+    .forEach(card => {
+        card.style.cursor = "pointer";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
 
-renderShipments();
+        const applyStatusFilter = () => {
+            statusFilter.value = card.dataset.statusFilter;
+            searchInput.value = "";
+            renderShipments();
+        };
+
+        card.addEventListener("click", applyStatusFilter);
+
+        card.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                applyStatusFilter();
+            }
+        });
+    });
+
+// Apply filters passed from the Dashboard.
+const dashboardParams = new URLSearchParams(window.location.search);
+const requestedStatus = dashboardParams.get("status");
+
+const allowedShipmentStatuses = [
+    "All Status",
+    "Preparing",
+    "In Transit",
+    "Out for Delivery",
+    "Delivered",
+    "Delayed"
+];
+
+if (
+    requestedStatus &&
+    allowedShipmentStatuses.includes(requestedStatus)
+) {
+    statusFilter.value = requestedStatus;
+}
+
+loadShipmentsFromApi();

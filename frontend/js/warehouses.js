@@ -5,6 +5,7 @@
 
 "use strict";
 
+const API_BASE_URL = "http://localhost:8000";
 const STORAGE_KEY = "logiflow.warehouses.v1";
 
 const sampleWarehouses = [
@@ -101,6 +102,7 @@ const VALID_STATUSES = [
 
 let warehouses = [];
 let selectedWarehouseId = null;
+let warehouseCardFilter = "all";
 
 
 /* =========================================
@@ -312,6 +314,49 @@ function saveWarehouses(nextWarehouses) {
     }
 }
 
+async function loadWarehousesFromApi() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/warehouses`);
+
+        if (!response.ok) {
+            throw new Error(`Warehouse API returned HTTP ${response.status}`);
+        }
+
+        const apiWarehouses = await response.json();
+
+        if (!Array.isArray(apiWarehouses)) {
+            throw new Error("Invalid warehouse API response.");
+        }
+
+        warehouses = apiWarehouses.map(warehouse => ({
+            id: warehouse.id,
+            name: warehouse.name,
+            code: warehouse.code,
+            type: warehouse.type,
+            city: warehouse.city,
+            state: warehouse.state,
+            address: warehouse.address,
+            capacity: Number(warehouse.capacity),
+            occupied: Number(warehouse.occupied),
+            manager: warehouse.manager || "",
+            status: warehouse.status,
+            createdAt: warehouse.created_at,
+            updatedAt: warehouse.updated_at
+        }));
+
+    } catch (error) {
+        console.error("Could not load warehouses from API:", error);
+        warehouses = [];
+
+        alert(
+            "Unable to load warehouses from the backend. " +
+            "Check that Docker and the LogiFlow API are running, then refresh."
+        );
+    }
+
+    renderPage();
+}
+
 
 /* =========================================
    STATISTICS AND CAPACITY
@@ -405,7 +450,13 @@ function getFilteredWarehouses() {
             selectedType === "all" ||
             warehouse.type === selectedType;
 
-        return matchesSearch && matchesStatus && matchesType;
+        const matchesCard =
+            warehouseCardFilter === "all" ||
+            warehouseCardFilter === "capacity" ||
+            (warehouseCardFilter === "active" && warehouse.status === "Active") ||
+            (warehouseCardFilter === "occupied" && Number(warehouse.occupied) > 0);
+
+        return matchesSearch && matchesStatus && matchesType && matchesCard;
     });
 }
 
@@ -796,7 +847,7 @@ function validateWarehouse(data) {
     return "";
 }
 
-function handleWarehouseSubmit(event) {
+async function handleWarehouseSubmit(event) {
     event.preventDefault();
 
     clearFormError();
@@ -824,35 +875,112 @@ function handleWarehouseSubmit(event) {
             return;
         }
 
-        const updatedWarehouse = {
-            ...existingWarehouse,
-            ...data,
-            updatedAt: currentTime
-        };
+                try {
+            const response = await fetch(
+                `${API_BASE_URL}/warehouses/${encodeURIComponent(selectedWarehouseId)}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                }
+            );
 
-        const nextWarehouses = warehouses.map(function (warehouse) {
-            return warehouse.id === selectedWarehouseId
-                ? updatedWarehouse
-                : warehouse;
-        });
+            const result = await response.json().catch(() => ({}));
 
-        if (saveWarehouses(nextWarehouses)) {
+            if (!response.ok) {
+                const detail = result.detail;
+                const message = typeof detail === "string"
+                    ? detail
+                    : detail
+                        ? JSON.stringify(detail)
+                        : `HTTP ${response.status}`;
+
+                throw new Error(message);
+            }
+
+            const savedWarehouse = {
+                id: result.id,
+                name: result.name,
+                code: result.code,
+                type: result.type,
+                city: result.city,
+                state: result.state,
+                address: result.address,
+                capacity: Number(result.capacity),
+                occupied: Number(result.occupied),
+                manager: result.manager || "",
+                status: result.status,
+                createdAt: result.created_at,
+                updatedAt: result.updated_at
+            };
+
+            warehouses = warehouses.map(warehouse =>
+                warehouse.id === selectedWarehouseId
+                    ? savedWarehouse
+                    : warehouse
+            );
+
             closeWarehouseModal();
             renderPage();
+
+        } catch (error) {
+            console.error("Could not update warehouse:", error);
+            showFormError(`Warehouse update failed: ${error.message}`);
         }
     } else {
         const newWarehouse = {
             id: generateId(),
-            ...data,
-            createdAt: currentTime,
-            updatedAt: currentTime
+            ...data
         };
 
-        const nextWarehouses = [...warehouses, newWarehouse];
+        try {
+            const response = await fetch(`${API_BASE_URL}/warehouses`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(newWarehouse)
+            });
 
-        if (saveWarehouses(nextWarehouses)) {
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const detail = result.detail;
+                const message = typeof detail === "string"
+                    ? detail
+                    : detail
+                        ? JSON.stringify(detail)
+                        : `HTTP ${response.status}`;
+
+                throw new Error(message);
+            }
+
+            const savedWarehouse = {
+                id: result.id,
+                name: result.name,
+                code: result.code,
+                type: result.type,
+                city: result.city,
+                state: result.state,
+                address: result.address,
+                capacity: Number(result.capacity),
+                occupied: Number(result.occupied),
+                manager: result.manager || "",
+                status: result.status,
+                createdAt: result.created_at,
+                updatedAt: result.updated_at
+            };
+
+            warehouses = [...warehouses, savedWarehouse];
+
             closeWarehouseModal();
             renderPage();
+
+        } catch (error) {
+            console.error("Could not create warehouse:", error);
+            showFormError(`Warehouse save failed: ${error.message}`);
         }
     }
 }
@@ -868,7 +996,7 @@ function findWarehouse(id) {
     });
 }
 
-function deleteWarehouse(id) {
+async function deleteWarehouse(id) {
     const warehouse = findWarehouse(id);
 
     if (!warehouse) {
@@ -878,7 +1006,7 @@ function deleteWarehouse(id) {
 
     const confirmed = confirm(
         `Delete "${warehouse.name}" (${warehouse.code})?\n\n` +
-        "This removes the warehouse from this browser's LogiFlow demo data. " +
+        "This will delete the warehouse from the LogiFlow database. " +
         "This action cannot be undone from this page."
     );
 
@@ -886,16 +1014,38 @@ function deleteWarehouse(id) {
         return;
     }
 
-    const nextWarehouses = warehouses.filter(function (item) {
-        return item.id !== id;
-    });
+        try {
+        const response = await fetch(
+            `${API_BASE_URL}/warehouses/${encodeURIComponent(id)}`,
+            {
+                method: "DELETE"
+            }
+        );
 
-    if (saveWarehouses(nextWarehouses)) {
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
+
+            throw new Error(message);
+        }
+
+        warehouses = warehouses.filter(item => item.id !== id);
+
         if (selectedWarehouseId === id) {
             closeDetailsModal();
         }
 
         renderPage();
+
+    } catch (error) {
+        console.error("Could not delete warehouse:", error);
+        alert(`Warehouse delete failed: ${error.message}`);
     }
 }
 
@@ -907,9 +1057,7 @@ function handleTableAction(event) {
     }
 
     const action = button.dataset.action;
-
     const id = button.dataset.id;
-
     const warehouse = findWarehouse(id);
 
     if (!warehouse) {
@@ -1025,10 +1173,33 @@ document.addEventListener("keydown", function (event) {
    INITIALIZE WAREHOUSE PAGE
 ========================================= */
 
-warehouses = loadWarehouses();
+// Make warehouse statistic cards filter the actual records.
+document
+    .querySelectorAll(".stats-grid .stat-card[data-warehouse-card]")
+    .forEach(card => {
+        card.style.cursor = "pointer";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
 
-renderPage();
+        const applyCardFilter = () => {
+            warehouseCardFilter = card.dataset.warehouseCard;
 
-console.log(
-    `LogiFlow Warehouses initialized: ${warehouses.length} record(s).`
-);
+            warehouseSearch.value = "";
+            typeFilter.value = "all";
+            statusFilter.value =
+                warehouseCardFilter === "active" ? "Active" : "all";
+
+            renderWarehouses();
+        };
+
+        card.addEventListener("click", applyCardFilter);
+
+        card.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                applyCardFilter();
+            }
+        });
+    });
+
+loadWarehousesFromApi();

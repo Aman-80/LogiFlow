@@ -6,6 +6,7 @@
 ========================================= */
 
 const STORAGE_KEY = "logiflow.deliveries.v1";
+const API_BASE_URL = "http://localhost:8000";
 
 const DELIVERY_STATUSES = [
     "Pending",
@@ -1031,6 +1032,87 @@ function saveDeliveries(nextRecords) {
     }
 }
 
+async function loadDeliveriesFromApi() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/deliveries`);
+
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : `HTTP ${response.status}`;
+
+            throw new Error(message);
+        }
+
+        const apiDeliveries = await response.json();
+
+        if (!Array.isArray(apiDeliveries)) {
+            throw new Error("Invalid deliveries API response.");
+        }
+
+        deliveries = apiDeliveries.map(item => normalizeDelivery({
+            id: item.id,
+            trackingId: item.tracking_id,
+            orderReference: item.order_reference,
+            priority: item.priority,
+            transportMode: item.transport_mode,
+            sourceWarehouse: item.source_warehouse,
+            recipientName: item.recipient_name,
+            recipientPhone: item.recipient_phone,
+            recipientPhoneCountry: item.recipient_phone_country,
+            driverName: item.driver_name,
+            driverPhone: item.driver_phone,
+            driverPhoneCountry: item.driver_phone_country,
+            vehicleNumber: item.vehicle_number,
+            carrierName: item.carrier_name,
+            destinationCountry: item.destination_country,
+            city: item.city,
+            state: item.state,
+            postalCode: item.postal_code,
+            address: item.address,
+            estimatedDelivery: item.estimated_delivery,
+            notes: item.notes,
+            status: item.status,
+            refundStatus: item.refund_status,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+
+            history: (item.history || []).map(event => ({
+                id: event.id,
+                type: event.type,
+                status: event.status,
+                title: event.title,
+                time: event.event_time,
+                location: event.location,
+                reason: event.reason,
+                actor: event.actor
+            })),
+
+            pod: item.pod ? {
+                receivedBy: item.pod.received_by,
+                method: item.pod.method,
+                reference: item.pod.reference,
+                deliveredAt: item.pod.delivered_at,
+                notes: item.pod.notes,
+                recordedAt: item.pod.recorded_at
+            } : null
+        }));
+
+    } catch (error) {
+        console.error("Could not load deliveries from API:", error);
+        deliveries = [];
+
+        alert(
+            "Unable to load deliveries from the backend. " +
+            "Check that Docker and the LogiFlow API are running, then refresh."
+        );
+    }
+
+    renderPage();
+}
+
 
 /* =========================================
    STATUS CALCULATIONS
@@ -1602,7 +1684,7 @@ function validateDelivery(data, currentId = null) {
    SAVE CREATE / EDIT DELIVERY
 ========================================= */
 
-function handleDeliverySubmit(event) {
+async function handleDeliverySubmit(event) {
     event.preventDefault();
     clearFormError(deliveryFormError);
 
@@ -1669,15 +1751,115 @@ function handleDeliverySubmit(event) {
             history: [...existing.history, auditEntry]
         };
 
-        const next = deliveries.map(item =>
-            item.id === editingDeliveryId ? updated : item
-        );
+                try {
+            const response = await fetch(
+                `${API_BASE_URL}/deliveries/${encodeURIComponent(editingDeliveryId)}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        tracking_id: data.trackingId,
+                        order_reference: data.orderReference,
+                        priority: data.priority,
+                        transport_mode: data.transportMode,
+                        source_warehouse: data.sourceWarehouse,
+                        recipient_name: data.recipientName,
+                        recipient_phone: data.recipientPhone,
+                        recipient_phone_country: data.recipientPhoneCountry,
+                        driver_name: data.driverName,
+                        driver_phone: data.driverPhone,
+                        driver_phone_country: data.driverPhoneCountry,
+                        vehicle_number: data.vehicleNumber,
+                        carrier_name: data.carrierName,
+                        destination_country: data.destinationCountry,
+                        city: data.city,
+                        state: data.state,
+                        postal_code: data.postalCode,
+                        address: data.address,
+                        estimated_delivery: new Date(
+                            data.estimatedDelivery
+                        ).toISOString(),
+                        notes: data.notes,
+                        refund_status: data.refundStatus
+                    })
+                }
+            );
 
-        if (saveDeliveries(next)) {
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const detail = result.detail;
+                const message = typeof detail === "string"
+                    ? detail
+                    : detail
+                        ? JSON.stringify(detail)
+                        : `HTTP ${response.status}`;
+
+                throw new Error(message);
+            }
+
+            const updatedDelivery = normalizeDelivery({
+                id: result.id,
+                trackingId: result.tracking_id,
+                orderReference: result.order_reference,
+                priority: result.priority,
+                transportMode: result.transport_mode,
+                sourceWarehouse: result.source_warehouse,
+                recipientName: result.recipient_name,
+                recipientPhone: result.recipient_phone,
+                recipientPhoneCountry: result.recipient_phone_country,
+                driverName: result.driver_name,
+                driverPhone: result.driver_phone,
+                driverPhoneCountry: result.driver_phone_country,
+                vehicleNumber: result.vehicle_number,
+                carrierName: result.carrier_name,
+                destinationCountry: result.destination_country,
+                city: result.city,
+                state: result.state,
+                postalCode: result.postal_code,
+                address: result.address,
+                estimatedDelivery: result.estimated_delivery,
+                notes: result.notes,
+                status: result.status,
+                refundStatus: result.refund_status,
+                createdAt: result.created_at,
+                updatedAt: result.updated_at,
+                history: (result.history || []).map(entry => ({
+                    id: entry.id,
+                    type: entry.type,
+                    status: entry.status,
+                    title: entry.title,
+                    time: entry.event_time,
+                    location: entry.location,
+                    reason: entry.reason,
+                    actor: entry.actor
+                })),
+                pod: result.pod ? {
+                    receivedBy: result.pod.received_by,
+                    method: result.pod.method,
+                    reference: result.pod.reference,
+                    deliveredAt: result.pod.delivered_at,
+                    notes: result.pod.notes,
+                    recordedAt: result.pod.recorded_at
+                } : null
+            });
+
+            deliveries = deliveries.map(item =>
+                item.id === editingDeliveryId ? updatedDelivery : item
+            );
+
             closeDeliveryModal();
             renderPage();
-        }
 
+        } catch (error) {
+            console.error("Could not update delivery:", error);
+            showFormError(
+                deliveryFormError,
+                `Delivery update failed: ${error.message}`
+            );
+        }
         return;
     }
 
@@ -1709,9 +1891,113 @@ function handleDeliverySubmit(event) {
         pod: null
     };
 
-    if (saveDeliveries([...deliveries, newDelivery])) {
+        const newDeliveryId = generateId();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/deliveries`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                id: newDeliveryId,
+                tracking_id: data.trackingId,
+                order_reference: data.orderReference,
+                priority: data.priority,
+                transport_mode: data.transportMode,
+                source_warehouse: data.sourceWarehouse,
+                recipient_name: data.recipientName,
+                recipient_phone: data.recipientPhone,
+                recipient_phone_country: data.recipientPhoneCountry,
+                driver_name: data.driverName,
+                driver_phone: data.driverPhone,
+                driver_phone_country: data.driverPhoneCountry,
+                vehicle_number: data.vehicleNumber,
+                carrier_name: data.carrierName,
+                destination_country: data.destinationCountry,
+                city: data.city,
+                state: data.state,
+                postal_code: data.postalCode,
+                address: data.address,
+                estimated_delivery: new Date(
+                    data.estimatedDelivery
+                ).toISOString(),
+                notes: data.notes,
+                status: data.status,
+                refund_status: data.refundStatus
+            })
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
+
+            throw new Error(message);
+        }
+
+        const savedDelivery = normalizeDelivery({
+            id: result.id,
+            trackingId: result.tracking_id,
+            orderReference: result.order_reference,
+            priority: result.priority,
+            transportMode: result.transport_mode,
+            sourceWarehouse: result.source_warehouse,
+            recipientName: result.recipient_name,
+            recipientPhone: result.recipient_phone,
+            recipientPhoneCountry: result.recipient_phone_country,
+            driverName: result.driver_name,
+            driverPhone: result.driver_phone,
+            driverPhoneCountry: result.driver_phone_country,
+            vehicleNumber: result.vehicle_number,
+            carrierName: result.carrier_name,
+            destinationCountry: result.destination_country,
+            city: result.city,
+            state: result.state,
+            postalCode: result.postal_code,
+            address: result.address,
+            estimatedDelivery: result.estimated_delivery,
+            notes: result.notes,
+            status: result.status,
+            refundStatus: result.refund_status,
+            createdAt: result.created_at,
+            updatedAt: result.updated_at,
+            history: (result.history || []).map(entry => ({
+                id: entry.id,
+                type: entry.type,
+                status: entry.status,
+                title: entry.title,
+                time: entry.event_time,
+                location: entry.location,
+                reason: entry.reason,
+                actor: entry.actor
+            })),
+            pod: result.pod ? {
+                receivedBy: result.pod.received_by,
+                method: result.pod.method,
+                reference: result.pod.reference,
+                deliveredAt: result.pod.delivered_at,
+                notes: result.pod.notes,
+                recordedAt: result.pod.recorded_at
+            } : null
+        });
+
+        deliveries = [...deliveries, savedDelivery];
+
         closeDeliveryModal();
         renderPage();
+
+    } catch (error) {
+        console.error("Could not create delivery:", error);
+        showFormError(
+            deliveryFormError,
+            `Delivery save failed: ${error.message}`
+        );
     }
 }
 
@@ -1881,21 +2167,49 @@ function closeDeliveryDetails() {
    TABLE ACTIONS
 ========================================= */
 
-function deleteDelivery(id) {
+async function deleteDelivery(id) {
     const delivery = findDelivery(id);
     if (!delivery) return;
 
     const confirmed = confirm(
-        `Delete delivery ${delivery.trackingId}?\n\nThis removes it from this browser's demo records.`
+        `Delete delivery ${delivery.trackingId}?\n\n` +
+        "This will permanently delete the delivery from the LogiFlow database."
     );
 
     if (!confirmed) return;
 
-    const next = deliveries.filter(item => item.id !== id);
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/deliveries/${encodeURIComponent(id)}`,
+            {
+                method: "DELETE"
+            }
+        );
 
-    if (saveDeliveries(next)) {
-        if (selectedDeliveryId === id) closeDeliveryDetails();
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
+
+            throw new Error(message);
+        }
+
+        deliveries = deliveries.filter(item => item.id !== id);
+
+        if (selectedDeliveryId === id) {
+            closeDeliveryDetails();
+        }
+
         renderPage();
+
+    } catch (error) {
+        console.error("Could not delete delivery:", error);
+        alert(`Delivery delete failed: ${error.message}`);
     }
 }
 
@@ -1905,6 +2219,7 @@ function handleDeliveryTableAction(event) {
     if (!button || button.disabled) return;
 
     const delivery = findDelivery(button.dataset.id);
+
     if (!delivery) {
         alert("Delivery record not found. Refresh and try again.");
         return;
@@ -1962,7 +2277,7 @@ function closeStatusModal() {
     clearFormError(deliveryStatusError);
 }
 
-function handleStatusSubmit(event) {
+async function handleStatusSubmit(event) {
     event.preventDefault();
     clearFormError(deliveryStatusError);
 
@@ -2024,29 +2339,107 @@ function handleStatusSubmit(event) {
         return;
     }
 
-    const statusHistoryEntry = createEvent({
-        type: "status",
-        status: nextStatus,
-        title: `${nextStatus} status recorded`,
-        time: eventDate.toISOString(),
-        location: eventLocation || delivery.city,
-        reason
-    });
+        try {
+        const response = await fetch(
+            `${API_BASE_URL}/deliveries/${encodeURIComponent(delivery.id)}/status`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    status: nextStatus,
+                    event_time: eventDate.toISOString(),
+                    location: eventLocation || delivery.city,
+                    reason: reason
+                })
+            }
+        );
 
-    const updated = {
-        ...delivery,
-        status: nextStatus,
-        updatedAt: nowISO(),
-        history: [...delivery.history, statusHistoryEntry]
-    };
+        const result = await response.json().catch(() => ({}));
 
-    const next = deliveries.map(item =>
-        item.id === delivery.id ? updated : item
-    );
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
 
-    if (saveDeliveries(next)) {
+            throw new Error(message);
+        }
+
+        // Fetch the complete updated delivery, including its history.
+        const detailResponse = await fetch(
+            `${API_BASE_URL}/deliveries/${encodeURIComponent(delivery.id)}`
+        );
+
+        const updatedData = await detailResponse.json().catch(() => ({}));
+
+        if (!detailResponse.ok) {
+            throw new Error("Status saved, but updated delivery could not be reloaded. Refresh the page to verify.");
+        }
+
+        const updatedDelivery = normalizeDelivery({
+            id: updatedData.id,
+            trackingId: updatedData.tracking_id,
+            orderReference: updatedData.order_reference,
+            priority: updatedData.priority,
+            transportMode: updatedData.transport_mode,
+            sourceWarehouse: updatedData.source_warehouse,
+            recipientName: updatedData.recipient_name,
+            recipientPhone: updatedData.recipient_phone,
+            recipientPhoneCountry: updatedData.recipient_phone_country,
+            driverName: updatedData.driver_name,
+            driverPhone: updatedData.driver_phone,
+            driverPhoneCountry: updatedData.driver_phone_country,
+            vehicleNumber: updatedData.vehicle_number,
+            carrierName: updatedData.carrier_name,
+            destinationCountry: updatedData.destination_country,
+            city: updatedData.city,
+            state: updatedData.state,
+            postalCode: updatedData.postal_code,
+            address: updatedData.address,
+            estimatedDelivery: updatedData.estimated_delivery,
+            notes: updatedData.notes,
+            status: updatedData.status,
+            refundStatus: updatedData.refund_status,
+            createdAt: updatedData.created_at,
+            updatedAt: updatedData.updated_at,
+            history: (updatedData.history || []).map(entry => ({
+                id: entry.id,
+                type: entry.type,
+                status: entry.status,
+                title: entry.title,
+                time: entry.event_time,
+                location: entry.location,
+                reason: entry.reason,
+                actor: entry.actor
+            })),
+            pod: updatedData.pod ? {
+                receivedBy: updatedData.pod.received_by,
+                method: updatedData.pod.method,
+                reference: updatedData.pod.reference,
+                deliveredAt: updatedData.pod.delivered_at,
+                notes: updatedData.pod.notes,
+                recordedAt: updatedData.pod.recorded_at
+            } : null
+        });
+
+        deliveries = deliveries.map(item =>
+            item.id === delivery.id ? updatedDelivery : item
+        );
+
         closeStatusModal();
         renderPage();
+
+    } catch (error) {
+        console.error("Could not update delivery status:", error);
+
+        showFormError(
+            deliveryStatusError,
+            `Status update failed: ${error.message}`
+        );
     }
 }
 
@@ -2087,7 +2480,7 @@ function closeProofOfDeliveryModal() {
     clearFormError(podFormError);
 }
 
-function handleProofOfDeliverySubmit(event) {
+async function handleProofOfDeliverySubmit(event) {
     event.preventDefault();
     clearFormError(podFormError);
 
@@ -2124,49 +2517,99 @@ function handleProofOfDeliverySubmit(event) {
         return;
     }
 
-    const currentTime = nowISO();
+        try {
+        const response = await fetch(
+            `${API_BASE_URL}/deliveries/${encodeURIComponent(delivery.id)}/proof-of-delivery`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    received_by: receivedBy,
+                    method: method,
+                    reference: reference,
+                    delivered_at: deliveredAt.toISOString(),
+                    notes: notes
+                })
+            }
+        );
 
-    const pod = {
-        receivedBy,
-        method,
-        reference,
-        deliveredAt: deliveredAt.toISOString(),
-        notes,
-        recordedAt: currentTime
-    };
+        const result = await response.json().catch(() => ({}));
 
-    const reasons = [];
+        if (!response.ok) {
+            const detail = result.detail;
+            const message = typeof detail === "string"
+                ? detail
+                : detail
+                    ? JSON.stringify(detail)
+                    : `HTTP ${response.status}`;
 
-    if (pendingDeliveredEvent?.reason) {
-        reasons.push(pendingDeliveredEvent.reason);
-    }
+            throw new Error(message);
+        }
 
-    reasons.push(`Handover confirmed by ${receivedBy} using ${method}.`);
+        const detailResponse = await fetch(
+            `${API_BASE_URL}/deliveries/${encodeURIComponent(delivery.id)}`
+        );
 
-    if (reference) reasons.push(`Proof reference: ${reference}.`);
+        const updatedData = await detailResponse.json().catch(() => ({}));
 
-    const deliveredHistoryEntry = createEvent({
-        type: "status",
-        status: "Delivered",
-        title: "Delivery confirmed",
-        time: deliveredAt.toISOString(),
-        location: pendingDeliveredEvent?.location || delivery.city,
-        reason: reasons.join(" ")
-    });
+        if (!detailResponse.ok) {
+            throw new Error(
+                "POD saved, but updated delivery could not be reloaded. Refresh to verify."
+            );
+        }
 
-    const updated = {
-        ...delivery,
-        status: "Delivered",
-        pod,
-        updatedAt: currentTime,
-        history: [...delivery.history, deliveredHistoryEntry]
-    };
+        const updatedDelivery = normalizeDelivery({
+            id: updatedData.id,
+            trackingId: updatedData.tracking_id,
+            orderReference: updatedData.order_reference,
+            priority: updatedData.priority,
+            transportMode: updatedData.transport_mode,
+            sourceWarehouse: updatedData.source_warehouse,
+            recipientName: updatedData.recipient_name,
+            recipientPhone: updatedData.recipient_phone,
+            recipientPhoneCountry: updatedData.recipient_phone_country,
+            driverName: updatedData.driver_name,
+            driverPhone: updatedData.driver_phone,
+            driverPhoneCountry: updatedData.driver_phone_country,
+            vehicleNumber: updatedData.vehicle_number,
+            carrierName: updatedData.carrier_name,
+            destinationCountry: updatedData.destination_country,
+            city: updatedData.city,
+            state: updatedData.state,
+            postalCode: updatedData.postal_code,
+            address: updatedData.address,
+            estimatedDelivery: updatedData.estimated_delivery,
+            notes: updatedData.notes,
+            status: updatedData.status,
+            refundStatus: updatedData.refund_status,
+            createdAt: updatedData.created_at,
+            updatedAt: updatedData.updated_at,
+            history: (updatedData.history || []).map(entry => ({
+                id: entry.id,
+                type: entry.type,
+                status: entry.status,
+                title: entry.title,
+                time: entry.event_time,
+                location: entry.location,
+                reason: entry.reason,
+                actor: entry.actor
+            })),
+            pod: updatedData.pod ? {
+                receivedBy: updatedData.pod.received_by,
+                method: updatedData.pod.method,
+                reference: updatedData.pod.reference,
+                deliveredAt: updatedData.pod.delivered_at,
+                notes: updatedData.pod.notes,
+                recordedAt: updatedData.pod.recorded_at
+            } : null
+        });
 
-    const next = deliveries.map(item =>
-        item.id === delivery.id ? updated : item
-    );
+        deliveries = deliveries.map(item =>
+            item.id === delivery.id ? updatedDelivery : item
+        );
 
-    if (saveDeliveries(next)) {
         closeProofOfDeliveryModal();
         renderPage();
 
@@ -2174,8 +2617,16 @@ function handleProofOfDeliverySubmit(event) {
             !deliveryDetailsModal.hidden &&
             selectedDeliveryId === delivery.id
         ) {
-            openDeliveryDetails(updated);
+            openDeliveryDetails(updatedDelivery);
         }
+
+    } catch (error) {
+        console.error("Could not save proof of delivery:", error);
+
+        showFormError(
+            podFormError,
+            `Proof of Delivery save failed: ${error.message}`
+        );
     }
 }
 
@@ -2283,11 +2734,13 @@ document.addEventListener("keydown", event => {
    INITIALIZE PAGE
 ========================================= */
 
-deliveries = loadDeliveries();
+// Apply status filters passed from the Dashboard.
+const dashboardParams = new URLSearchParams(window.location.search);
+const requestedDeliveryStatus = dashboardParams.get("status");
+
+if (DELIVERY_STATUSES.includes(requestedDeliveryStatus)) {
+    deliveryStatusFilter.value = requestedDeliveryStatus;
+}
 
 refreshLocationSuggestions();
-renderPage();
-
-console.log(
-    `LogiFlow Deliveries initialized: ${deliveries.length} record(s).`
-);
+loadDeliveriesFromApi();

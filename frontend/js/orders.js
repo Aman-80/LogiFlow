@@ -3,6 +3,7 @@
    ELEMENTS
 ================================ */
 
+const API_BASE_URL = "http://localhost:8000";
 const openOrderButton = document.querySelector("#open-order-modal");
 const orderModal = document.querySelector("#order-modal");
 const closeOrderButton = document.querySelector("#close-order-modal");
@@ -256,7 +257,7 @@ function closeOrderModal() {
    CREATE ORDER
 ================================ */
 
-function createOrder(event) {
+async function createOrder(event) {
     event.preventDefault();
 
     const customer = customerNameInput.value.trim();
@@ -316,13 +317,59 @@ function createOrder(event) {
         status
     };
 
-    orders.unshift(newOrder);
+   try {
+    const response = await fetch(`${API_BASE_URL}/orders`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            id: newOrder.id,
+            customer: newOrder.customer,
+            email: newOrder.email,
+            product: newOrder.product,
+            quantity: newOrder.quantity,
+            amount: newOrder.amount,
+            order_date: newOrder.date,
+            status: newOrder.status
+        })
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const detail = result.detail;
+        const message = typeof detail === "string"
+            ? detail
+            : detail
+                ? JSON.stringify(detail)
+                : `HTTP ${response.status}`;
+
+        throw new Error(message);
+    }
+
+    // Use the record returned by the backend.
+    orders.unshift({
+        id: result.id,
+        customer: result.customer,
+        email: result.email,
+        product: result.product,
+        quantity: Number(result.quantity),
+        amount: Number(result.amount),
+        date: result.order_date,
+        status: result.status
+    });
 
     searchInput.value = "";
     statusFilter.value = "All Status";
 
     renderOrders();
     closeOrderModal();
+
+} catch (error) {
+    console.error("Could not save order:", error);
+    alert(`Order save nahi hua: ${error.message}`);
+}
 }
 
 
@@ -396,4 +443,83 @@ document.addEventListener("keydown", event => {
    INITIALIZE PAGE
 ================================ */
 
-renderOrders();
+// Apply a status filter passed from another page, such as the Dashboard.
+const dashboardParams = new URLSearchParams(window.location.search);
+const requestedStatus = dashboardParams.get("status");
+
+const allowedOrderStatuses = [
+    "All Status",
+    "Pending",
+    "Processing",
+    "Shipped",
+    "Delivered",
+    "Cancelled"
+];
+
+if (requestedStatus && allowedOrderStatuses.includes(requestedStatus)) {
+    statusFilter.value = requestedStatus;
+}
+
+async function loadOrdersFromApi() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/orders`);
+
+        if (!response.ok) {
+            throw new Error(`Orders API returned HTTP ${response.status}`);
+        }
+
+        const apiOrders = await response.json();
+
+        if (!Array.isArray(apiOrders)) {
+            throw new Error("Invalid orders API response.");
+        }
+
+        orders = apiOrders.map(order => ({
+            id: order.id,
+            customer: order.customer,
+            email: order.email,
+            product: order.product,
+            quantity: Number(order.quantity),
+            amount: Number(order.amount),
+            date: order.order_date,
+            status: order.status
+        }));
+
+    } catch (error) {
+        console.error("Could not load orders from API:", error);
+        orders = [];
+
+        alert(
+            "Unable to load orders from the backend. " +
+            "Check that the LogiFlow API is running, then refresh."
+        );
+    }
+
+    renderOrders();
+}
+
+// Make order statistic cards filter the actual order table.
+document
+    .querySelectorAll(".order-stats .stat-card[data-status-filter]")
+    .forEach(card => {
+        card.style.cursor = "pointer";
+        card.setAttribute("role", "button");
+        card.setAttribute("tabindex", "0");
+
+        const applyStatusFilter = () => {
+            statusFilter.value = card.dataset.statusFilter;
+            searchInput.value = "";
+            renderOrders();
+        };
+
+        card.addEventListener("click", applyStatusFilter);
+
+        card.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                applyStatusFilter();
+            }
+        });
+    });
+
+loadOrdersFromApi();
