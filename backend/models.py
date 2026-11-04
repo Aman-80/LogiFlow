@@ -1,10 +1,12 @@
 
 from __future__ import annotations
 
+import enum
 from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -13,6 +15,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -23,8 +26,199 @@ class Base(DeclarativeBase):
 
 
 # =========================================================
+# MULTI-TENANCY & AUTHENTICATION ENUMS & MODELS
+# =========================================================
+
+class IndustryType(str, enum.Enum):
+    RETAIL_KIRANA = "retail_kirana"
+    MARITIME_SHIPPING = "maritime_shipping"
+    ROAD_LOGISTICS = "road_logistics"
+    WAREHOUSE_DISTRIBUTION = "warehouse_distribution"
+
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    slug: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
+    )
+    industry_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default=IndustryType.ROAD_LOGISTICS.value,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    bootstrap_claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    members: Mapped[list[WorkspaceMember]] = relationship(
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
+    hashed_password: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )
+    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    is_superuser: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    memberships: Mapped[list[WorkspaceMember]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    sessions: Mapped[list[UserSession]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+
+class WorkspaceMember(Base):
+    __tablename__ = "workspace_members"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "user_id", name="uq_workspace_member"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="owner"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    workspace: Mapped[Workspace] = relationship(back_populates="members")
+    user: Mapped[User] = relationship(back_populates="memberships")
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    current_refresh_token_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, index=True
+    )
+    previous_refresh_token_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
+    rotation_counter: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    user_agent: Mapped[str] = mapped_column(
+        String(300), default="", nullable=False
+    )
+    ip_address: Mapped[str] = mapped_column(
+        String(45), default="", nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    last_refreshed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    token_hash: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=False, index=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="reset_tokens")
+
+
+# =========================================================
 # INVENTORY
-# Existing Product fields are preserved.
+# Workspace-scoped SKU uniqueness.
 # =========================================================
 
 class Product(Base):
@@ -35,13 +229,23 @@ class Product(Base):
             "quantity >= 0",
             name="ck_products_quantity_nonnegative",
         ),
+        UniqueConstraint(
+            "workspace_id", "sku",
+            name="uq_products_workspace_sku",
+        ),
     )
 
     id: Mapped[int] = mapped_column(
         Integer, primary_key=True, index=True
     )
+    workspace_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     sku: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False, index=True
+        String(50), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     category: Mapped[str] = mapped_column(
@@ -60,6 +264,7 @@ class Product(Base):
 
 # =========================================================
 # WAREHOUSES
+# Workspace-scoped Code uniqueness.
 # =========================================================
 
 class Warehouse(Base):
@@ -74,12 +279,22 @@ class Warehouse(Base):
             "occupied >= 0 AND occupied <= capacity",
             name="ck_warehouses_occupied_within_capacity",
         ),
+        UniqueConstraint(
+            "workspace_id", "code",
+            name="uq_warehouses_workspace_code",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     code: Mapped[str] = mapped_column(
-        String(30), unique=True, nullable=False, index=True
+        String(30), nullable=False, index=True
     )
     type: Mapped[str] = mapped_column(String(50), nullable=False)
     city: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -109,7 +324,6 @@ class Warehouse(Base):
 # =========================================================
 # ORDERS
 # Existing IDs such as LF-ORD-1001 are retained as identifiers.
-# Product remains a name for compatibility with the current UI.
 # =========================================================
 
 class CustomerOrder(Base):
@@ -127,6 +341,12 @@ class CustomerOrder(Base):
     )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     customer: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str] = mapped_column(String(254), nullable=False)
     product: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -165,6 +385,12 @@ class Shipment(Base):
     )
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     order_id: Mapped[str] = mapped_column(String(40), nullable=False)
     carrier: Mapped[str] = mapped_column(String(120), nullable=False)
     tracking_number: Mapped[str] = mapped_column(
@@ -198,6 +424,12 @@ class Delivery(Base):
     __tablename__ = "deliveries"
 
     id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("workspaces.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
     tracking_id: Mapped[str] = mapped_column(
         String(40), unique=True, nullable=False, index=True
     )
